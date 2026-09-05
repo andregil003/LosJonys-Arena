@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { TuringBackground } from '../ui/TuringBackground';
-import { THEME, monoStyle, sansStyle, monoFaStyle } from '../ui/theme';
-import { fa } from '../ui/icons';
+import { THEME, monoStyle, sansStyle } from '../ui/theme';
+import { ICONS, iconStyle } from '../ui/icons';
 import {
   COLORS,
   ACCESSORIES,
@@ -304,10 +304,10 @@ export class CreateJonyScene extends Phaser.Scene {
     // ============================================================
     // Botones inferiores
     // ============================================================
-    const backBtn = this.createActionButton(width / 2 - 120, height - 60, `${fa('arrowLeft')}  VOLVER`, false);
+    const backBtn = this.createActionButton(width / 2 - 120, height - 60, 'VOLVER', ICONS.arrowLeft, false);
     backBtn.on('pointerdown', () => this.scene.start('MenuScene'));
 
-    const continueBtn = this.createActionButton(width / 2 + 120, height - 60, `CONTINUAR  ${fa('arrowRight')}`, true);
+    const continueBtn = this.createActionButton(width / 2 + 120, height - 60, 'CONTINUAR', ICONS.arrowRight, true);
     continueBtn.on('pointerdown', () => this.onContinue());
 
     // Versión
@@ -441,9 +441,17 @@ export class CreateJonyScene extends Phaser.Scene {
   }
 
   /** Botón de acción inferior (VOLVER / CONTINUAR) */
-  private createActionButton(x: number, y: number, label: string, primary: boolean): Phaser.GameObjects.Text {
+  private createActionButton(x: number, y: number, label: string, icon: string, primary: boolean): Phaser.GameObjects.Text {
+    // Icono a la izquierda del texto
+    this.add
+      .text(x - label.length * 6 - 14, y, icon, iconStyle({
+        fontSize: '16px',
+        color: primary ? THEME.bg : THEME.text,
+      }))
+      .setOrigin(0.5);
+
     const btn = this.add
-      .text(x, y, label, monoFaStyle({
+      .text(x, y, label, monoStyle({
         fontSize: '18px',
         color: primary ? THEME.bg : THEME.text,
         backgroundColor: primary ? THEME.accent : THEME.bg,

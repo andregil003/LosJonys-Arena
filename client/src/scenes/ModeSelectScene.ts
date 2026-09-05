@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { TuringBackground } from '../ui/TuringBackground';
-import { THEME, monoStyle, sansStyle, monoFaStyle } from '../ui/theme';
-import { fa } from '../ui/icons';
+import { THEME, monoStyle, sansStyle } from '../ui/theme';
+import { ICONS, iconStyle } from '../ui/icons';
 import type { GameMode } from '../types';
 
 /**
@@ -58,7 +58,12 @@ export class ModeSelectScene extends Phaser.Scene {
       coopX, cardY, cardW, cardH,
       'COOP',
       'Jugadores contra la IA',
-      [`${fa('peopleGroup')}  Hasta 6 jugadores`, `${fa('shieldHalved')}  Rondas de oleadas`, `${fa('crosshairs')}  Pantalla tipo Valorant`, `${fa('timer')}  Lobby 2:00`],
+      [
+        { icon: ICONS.users, text: 'Hasta 6 jugadores' },
+        { icon: ICONS.shieldHalved, text: 'Rondas de oleadas' },
+        { icon: ICONS.crosshairs, text: 'Pantalla tipo Valorant' },
+        { icon: ICONS.stopwatch, text: 'Lobby 2:00' },
+      ],
       THEME.accent,
       'coop',
     );
@@ -70,7 +75,12 @@ export class ModeSelectScene extends Phaser.Scene {
       ffaX, cardY, cardW, cardH,
       'FFA',
       'Todos contra todos',
-      [`${fa('users')}  Hasta 6 jugadores`, `${fa('skull')}  Último en pie`, `${fa('gun')}  Cuchillo instakill`, `${fa('timer')}  Partida rápida`],
+      [
+        { icon: ICONS.users, text: 'Hasta 6 jugadores' },
+        { icon: ICONS.skull, text: 'Último en pie' },
+        { icon: ICONS.gun, text: 'Cuchillo instakill' },
+        { icon: ICONS.stopwatch, text: 'Partida rápida' },
+      ],
       '#f97316',
       'ffa',
     );
@@ -78,10 +88,10 @@ export class ModeSelectScene extends Phaser.Scene {
     // ============================================================
     // Botones inferiores
     // ============================================================
-    const backBtn = this.createActionButton(width / 2 - 120, height - 60, `${fa('arrowLeft')}  VOLVER`, false);
+    const backBtn = this.createActionButton(width / 2 - 120, height - 60, 'VOLVER', ICONS.arrowLeft, false);
     backBtn.on('pointerdown', () => this.scene.start('CreateJonyScene'));
 
-    const playBtn = this.createActionButton(width / 2 + 120, height - 60, `JUGAR  ${fa('arrowRight')}`, true);
+    const playBtn = this.createActionButton(width / 2 + 120, height - 60, 'JUGAR', ICONS.arrowRight, true);
     playBtn.on('pointerdown', () => {
       if (!this.selected) {
         // Feedback: parpadeo si no eligió modo
@@ -117,7 +127,7 @@ export class ModeSelectScene extends Phaser.Scene {
     h: number,
     title: string,
     subtitle: string,
-    features: string[],
+    features: { icon: string; text: string }[],
     accent: string,
     mode: GameMode,
   ): Phaser.GameObjects.Container {
@@ -152,15 +162,25 @@ export class ModeSelectScene extends Phaser.Scene {
       .rectangle(0, -h / 2 + 120, 60, 2, accentColor)
       .setOrigin(0.5);
 
-    // Características
-    const featTexts = features.map((f, i) =>
+    // Características (icono + texto separados)
+    const featTexts: Phaser.GameObjects.Text[] = [];
+    features.forEach((f, i) => {
+      const y = -h / 2 + 155 + i * 32;
       this.add
-        .text(0, -h / 2 + 155 + i * 32, f, monoFaStyle({
+        .text(-60, y, f.icon, iconStyle({
           fontSize: '14px',
-          color: THEME.text,
+          color: accent,
         }))
-        .setOrigin(0.5)
-    );
+        .setOrigin(0.5);
+      featTexts.push(
+        this.add
+          .text(-40, y, f.text, monoStyle({
+            fontSize: '14px',
+            color: THEME.text,
+          }))
+          .setOrigin(0, 0.5)
+      );
+    });
 
     // Badge "SELECCIONADO" (oculto al inicio)
     const badge = this.add
@@ -223,9 +243,17 @@ export class ModeSelectScene extends Phaser.Scene {
     });
   }
 
-  private createActionButton(x: number, y: number, label: string, primary: boolean): Phaser.GameObjects.Text {
+  private createActionButton(x: number, y: number, label: string, icon: string, primary: boolean): Phaser.GameObjects.Text {
+    // Icono a la izquierda del texto
+    this.add
+      .text(x - label.length * 6 - 14, y, icon, iconStyle({
+        fontSize: '16px',
+        color: primary ? THEME.bg : THEME.text,
+      }))
+      .setOrigin(0.5);
+
     const btn = this.add
-      .text(x, y, label, monoFaStyle({
+      .text(x, y, label, monoStyle({
         fontSize: '18px',
         color: primary ? THEME.bg : THEME.text,
         backgroundColor: primary ? THEME.accent : THEME.bg,

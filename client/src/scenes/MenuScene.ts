@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { TuringBackground } from '../ui/TuringBackground';
-import { THEME, monoStyle, sansStyle, monoFaStyle } from '../ui/theme';
-import { fa } from '../ui/icons';
+import { THEME, monoStyle, sansStyle } from '../ui/theme';
+import { ICONS, iconStyle } from '../ui/icons';
 
 /**
  * MenuScene — Menú principal de LosJonys Arena.
@@ -59,8 +59,15 @@ export class MenuScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     // Botón JUGAR (borde fino + hover cian)
+    const playIcon = this.add
+      .text(width / 2 - 78, height / 2 + 70, ICONS.play, iconStyle({
+        fontSize: '18px',
+        color: THEME.text,
+      }))
+      .setOrigin(0.5);
+
     const playBtn = this.add
-      .text(width / 2, height / 2 + 70, `${fa('play')}  JUGAR`, monoFaStyle({
+      .text(width / 2, height / 2 + 70, 'JUGAR', monoStyle({
         fontSize: '22px',
         color: THEME.text,
         backgroundColor: THEME.bg,

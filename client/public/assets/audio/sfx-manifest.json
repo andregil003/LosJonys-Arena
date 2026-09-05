@@ -1,0 +1,181 @@
+{
+  "generatedAt": "2026-09-05T18:07:42.335Z",
+  "sounds": {
+    "weapon-shotgun": {
+      "file": "assets/audio/preview/weapon-shotgun.wav",
+      "bytes": 58548,
+      "ms": 663,
+      "bits": 16,
+      "peakDb": -0.00026506767422515066
+    },
+    "weapon-rifle": {
+      "file": "assets/audio/preview/weapon-rifle.wav",
+      "bytes": 20928,
+      "ms": 237,
+      "bits": 16,
+      "peakDb": -0.00026506767422515066
+    },
+    "weapon-sniper-windup": {
+      "file": "assets/audio/preview/weapon-sniper-windup.wav",
+      "bytes": 71828,
+      "ms": 814,
+      "bits": 16,
+      "peakDb": -0.4868096978978397
+    },
+    "weapon-sniper-shot": {
+      "file": "assets/audio/preview/weapon-sniper-shot.wav",
+      "bytes": 82048,
+      "ms": 930,
+      "bits": 16,
+      "peakDb": -0.00026506767422515066
+    },
+    "weapon-smg": {
+      "file": "assets/audio/preview/weapon-smg.wav",
+      "bytes": 19328,
+      "ms": 219,
+      "bits": 16,
+      "peakDb": -0.5806725069900996
+    },
+    "weapon-grenade-launch": {
+      "file": "assets/audio/preview/weapon-grenade-launch.wav",
+      "bytes": 19328,
+      "ms": 219,
+      "bits": 16,
+      "peakDb": -0.06305041724171861
+    },
+    "weapon-grenade-explosion": {
+      "file": "assets/audio/preview/weapon-grenade-explosion.wav",
+      "bytes": 104048,
+      "ms": 1179,
+      "bits": 16,
+      "peakDb": -0.00026506767422515066
+    },
+    "knife-swing": {
+      "file": "assets/audio/preview/knife-swing.wav",
+      "bytes": 34048,
+      "ms": 386,
+      "bits": 16,
+      "peakDb": -0.0005301521241985359
+    },
+    "knife-hit": {
+      "file": "assets/audio/preview/knife-hit.wav",
+      "bytes": 27968,
+      "ms": 317,
+      "bits": 16,
+      "peakDb": -0.00026506767422515066
+    },
+    "power-kamehameha-charge": {
+      "file": "assets/audio/preview/power-kamehameha-charge.wav",
+      "bytes": 94528,
+      "ms": 1071,
+      "bits": 16,
+      "peakDb": -0.8424714716640489
+    },
+    "power-kamehameha-beam": {
+      "file": "assets/audio/preview/power-kamehameha-beam.wav",
+      "bytes": 89968,
+      "ms": 1020,
+      "bits": 16,
+      "peakDb": -0.00026506767422515066
+    },
+    "power-kamehameha-impact": {
+      "file": "assets/audio/preview/power-kamehameha-impact.wav",
+      "bytes": 94768,
+      "ms": 1074,
+      "bits": 16,
+      "peakDb": -0.00026506767422515066
+    },
+    "power-dash": {
+      "file": "assets/audio/preview/power-dash.wav",
+      "bytes": 18548,
+      "ms": 210,
+      "bits": 16,
+      "peakDb": -0.00026506767422515066
+    },
+    "power-shield": {
+      "file": "assets/audio/preview/power-shield.wav",
+      "bytes": 35968,
+      "ms": 407,
+      "bits": 16,
+      "peakDb": -0.00026506767422515066
+    },
+    "power-shield-block": {
+      "file": "assets/audio/preview/power-shield-block.wav",
+      "bytes": 21808,
+      "ms": 247,
+      "bits": 16,
+      "peakDb": -0.20084340738648615
+    },
+    "power-ceguera-launch": {
+      "file": "assets/audio/preview/power-ceguera-launch.wav",
+      "bytes": 56546,
+      "ms": 641,
+      "bits": 16,
+      "peakDb": -0.00026506767422515066
+    },
+    "power-ceguera-hit": {
+      "file": "assets/audio/preview/power-ceguera-hit.wav",
+      "bytes": 61028,
+      "ms": 691,
+      "bits": 16,
+      "peakDb": -0.00026506767422515066
+    },
+    "power-teleport-mark": {
+      "file": "assets/audio/preview/power-teleport-mark.wav",
+      "bytes": 30308,
+      "ms": 343,
+      "bits": 16,
+      "peakDb": -0.00026506767422515066
+    },
+    "power-teleport-return": {
+      "file": "assets/audio/preview/power-teleport-return.wav",
+      "bytes": 34388,
+      "ms": 389,
+      "bits": 16,
+      "peakDb": -0.00026506767422515066
+    },
+    "player-hurt": {
+      "file": "assets/audio/preview/player-hurt.wav",
+      "bytes": 18368,
+      "ms": 208,
+      "bits": 16,
+      "peakDb": -0.00026506767422515066
+    },
+    "player-death": {
+      "file": "assets/audio/preview/player-death.wav",
+      "bytes": 68548,
+      "ms": 777,
+      "bits": 16,
+      "peakDb": -0.00026506767422515066
+    },
+    "player-power-ready": {
+      "file": "assets/audio/preview/player-power-ready.wav",
+      "bytes": 30928,
+      "ms": 350,
+      "bits": 16,
+      "peakDb": -0.00026506767422515066
+    },
+    "player-step": {
+      "file": "assets/audio/preview/player-step.wav",
+      "bytes": 16448,
+      "ms": 186,
+      "bits": 16,
+      "peakDb": -0.00026506767422515066
+    },
+    "ui-click": {
+      "file": "assets/audio/preview/ui-click.wav",
+      "bytes": 19328,
+      "ms": 219,
+      "bits": 16,
+      "peakDb": -1.6214534637213163
+    },
+    "ui-weapon-switch": {
+      "file": "assets/audio/preview/ui-weapon-switch.wav",
+      "bytes": 13888,
+      "ms": 157,
+      "bits": 16,
+      "peakDb": -0.00026506767422515066
+    }
+  },
+  "totalBytes": 1143438
+}

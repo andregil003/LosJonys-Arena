@@ -75,6 +75,7 @@ export class GameScene extends Phaser.Scene {
   private slotHighlights: Phaser.GameObjects.Rectangle[] = [];
   private superReadyFlash?: Phaser.GameObjects.Text;
   private deathOverlay?: Phaser.GameObjects.Text;
+  private ammoText?: Phaser.GameObjects.Text;
 
   constructor() {
     super('GameScene');
@@ -89,9 +90,14 @@ export class GameScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const jony = loadJony();
 
+    // Mundo más grande que la pantalla: la cámara sigue al jugador.
+    // El fondo y las paredes se generan en el mundo (ARENA_WIDTH x ARENA_HEIGHT).
+    this.physics.world.setBounds(0, 0, GAME_CONSTANTS.ARENA_WIDTH, GAME_CONSTANTS.ARENA_HEIGHT);
+    this.cameras.main.setBounds(0, 0, GAME_CONSTANTS.ARENA_WIDTH, GAME_CONSTANTS.ARENA_HEIGHT);
+
     // Fondo de la arena (aleatoria del catálogo — Shrek agrega más)
-    this.add.rectangle(width / 2, height / 2, width, height, this.arena.backgroundColor);
-    this.arena.decorate?.(this, width, height);
+    this.add.rectangle(GAME_CONSTANTS.ARENA_WIDTH / 2, GAME_CONSTANTS.ARENA_HEIGHT / 2, GAME_CONSTANTS.ARENA_WIDTH, GAME_CONSTANTS.ARENA_HEIGHT, this.arena.backgroundColor);
+    this.arena.decorate?.(this, GAME_CONSTANTS.ARENA_WIDTH, GAME_CONSTANTS.ARENA_HEIGHT);
 
     // Mapa procedural: paredes aleatorias (no bloquean la zona de spawn)
     this.createWalls();
@@ -105,7 +111,8 @@ export class GameScene extends Phaser.Scene {
       weapon2: 'w2',
       power: 'p1',
     };
-    this.player = new Player(this, jony ?? fallback, width / 2, height / 2);
+    this.player = new Player(this, jony ?? fallback, GAME_CONSTANTS.ARENA_WIDTH / 2, GAME_CONSTANTS.ARENA_HEIGHT / 2);
+    this.player.setWalls(this.walls);
 
     // Dummies de prueba (placeholder hasta que Shrek ponga enemigos reales)
     if (this.solo) {
@@ -114,16 +121,25 @@ export class GameScene extends Phaser.Scene {
       this.createDummies();
     }
 
+    // Pasar las paredes a los NPCs (bloquean sus disparos)
+    for (const d of this.dummies) {
+      if (d instanceof NPC) d.setWalls(this.walls);
+    }
+
     // Colliders con las paredes (jugador + NPCs)
     this.physics.add.collider(this.player.gameObject, this.walls);
     for (const d of this.dummies) {
       this.physics.add.collider(d.gameObject, this.walls);
     }
 
+    // La cámara sigue al jugador
+    this.cameras.main.startFollow(this.player.gameObject, true, 0.12, 0.12);
+
     // HUD
     this.createHud();
 
     // Countdown inicial: 3-2-1-PELEA (nadie dispara ni recibe daño)
+    this.player.setCombatEnabled(false);
     this.startCountdown();
 
     // Instrucciones
@@ -132,7 +148,8 @@ export class GameScene extends Phaser.Scene {
         fontSize: '12px',
         color: '#888888',
       }))
-      .setOrigin(0, 0);
+      .setOrigin(0, 0)
+      .setScrollFactor(0);
 
     // Estado de red (esquina superior derecha)
     this.netStatus = this.add
@@ -140,7 +157,8 @@ export class GameScene extends Phaser.Scene {
         fontSize: '12px',
         color: '#888888',
       }))
-      .setOrigin(1, 0);
+      .setOrigin(1, 0)
+      .setScrollFactor(0);
 
     // Conectar al servidor (no bloquea el juego si falla)
     this.connectToServer(jony);
@@ -230,13 +248,14 @@ export class GameScene extends Phaser.Scene {
   // ============================================================
 
   private createNpcs(): void {
-    const names = ['BOT 1', 'BOT 2', 'BOT 3', 'BOT 4', 'BOT 5'];
-    const colors = ['#ef4444', '#3b82f6', '#a855f7', '#f97316', '#22c55e'];
+    // Partida de 4: jugador + 3 bots
+    const names = ['BOT 1', 'BOT 2', 'BOT 3'];
+    const colors = ['#ef4444', '#3b82f6', '#a855f7'];
 
     // Cada bot spawnea alejado del jugador y de los demás bots
     const taken: Array<[number, number]> = [];
     for (let i = 0; i < names.length; i++) {
-      const [x, y] = this.randomSpawn(240, 220, taken);
+      const [x, y] = this.randomSpawn(300, 280, taken);
       taken.push([x, y]);
       this.dummies.push(new NPC(this, x, y, names[i], colors[i]));
     }
@@ -244,10 +263,10 @@ export class GameScene extends Phaser.Scene {
 
   /** Posición aleatoria lejos del jugador y de otras posiciones tomadas. */
   private randomSpawn(minFromPlayer: number, minBetween: number, taken: Array<[number, number]> = []): [number, number] {
-    const { width, height } = this.scale;
+    const { ARENA_WIDTH: width, ARENA_HEIGHT: height } = GAME_CONSTANTS;
     for (let i = 0; i < 80; i++) {
-      const x = Phaser.Math.Between(80, width - 80);
-      const y = Phaser.Math.Between(80, height - 80);
+      const x = Phaser.Math.Between(100, width - 100);
+      const y = Phaser.Math.Between(100, height - 100);
 
       // Lejos del jugador
       if (this.player && Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y) < minFromPlayer) continue;
@@ -265,7 +284,7 @@ export class GameScene extends Phaser.Scene {
       return [x, y];
     }
     // Fallback: esquina alejada del centro
-    return [Phaser.Math.Between(80, width / 2 - 60), Phaser.Math.Between(80, height / 2 - 60)];
+    return [Phaser.Math.Between(100, width / 2 - 80), Phaser.Math.Between(100, height / 2 - 80)];
   }
 
   // ============================================================
@@ -273,10 +292,10 @@ export class GameScene extends Phaser.Scene {
   // ============================================================
 
   private createWalls(): void {
-    const { width, height } = this.scale;
+    const { ARENA_WIDTH: width, ARENA_HEIGHT: height } = GAME_CONSTANTS;
     const rects: WallRect[] = generateMap(width, height, {
-      count: 10,
-      safeRadius: 240, // respeta la zona de spawn central
+      count: 16,
+      safeRadius: 300, // respeta la zona de spawn central
     });
 
     this.walls = rects.map((r) => {
@@ -295,7 +314,10 @@ export class GameScene extends Phaser.Scene {
 
   private startCountdown(): void {
     const { width, height } = this.scale;
-    const steps = ['3', '2', '1', '¡PELEA!'];
+    const total = GAME_CONSTANTS.COUNTDOWN_SECONDS; // 10s
+    const steps: string[] = [];
+    for (let i = total; i >= 1; i--) steps.push(String(i));
+    steps.push('¡PELEA!');
 
     this.countdownText = this.add
       .text(width / 2, height / 2, steps[0], monoStyle({
@@ -304,7 +326,8 @@ export class GameScene extends Phaser.Scene {
         fontStyle: 'bold',
       }))
       .setOrigin(0.5)
-      .setDepth(30);
+      .setDepth(30)
+      .setScrollFactor(0);
 
     // Entrada del primer número
     this.countdownText.setScale(0.4);
@@ -314,17 +337,18 @@ export class GameScene extends Phaser.Scene {
     const tick = (): void => {
       i++;
       if (i >= steps.length) {
-        this.countdownText?.destroy();
-        this.countdownText = undefined;
-        this.countdownActive = false;
-        return;
+this.countdownText?.destroy();
+      this.countdownText = undefined;
+      this.countdownActive = false;
+      this.player.setCombatEnabled(true);
+      return;
       }
       this.countdownText?.setText(steps[i]);
       this.countdownText?.setScale(0.4);
       this.tweens.add({ targets: this.countdownText, scale: 1, duration: 200 });
-      this.time.delayedCall(800, tick);
+      this.time.delayedCall(1000, tick);
     };
-    this.time.delayedCall(800, tick);
+    this.time.delayedCall(1000, tick);
   }
 
   // ============================================================
@@ -338,36 +362,44 @@ export class GameScene extends Phaser.Scene {
     // ---- Barra de vida (heart) ----
     this.add
       .text(24, 24, ICONS.heart, iconStyle({ fontSize: '22px', color: '#ef4444' }))
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setScrollFactor(0);
 
     this.add
       .rectangle(52, 24, 220, 14, 0x000000, 0.5)
       .setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(THEME.border).color)
-      .setOrigin(0, 0.5);
+      .setOrigin(0, 0.5)
+      .setScrollFactor(0);
     this.hpFill = this.add
       .rectangle(54, 24, 216, 10, 0xef4444)
-      .setOrigin(0, 0.5);
+      .setOrigin(0, 0.5)
+      .setScrollFactor(0);
 
     this.hpText = this.add
       .text(280, 24, '', monoStyle({ fontSize: '12px', color: THEME.text }))
-      .setOrigin(0, 0.5);
+      .setOrigin(0, 0.5)
+      .setScrollFactor(0);
 
     // ---- Barra de Super (zap) ----
     this.add
       .text(24, 52, ICONS.zap, iconStyle({ fontSize: '22px', color: '#facc15' }))
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setScrollFactor(0);
 
     this.add
       .rectangle(52, 52, 220, 14, 0x000000, 0.5)
       .setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(THEME.border).color)
-      .setOrigin(0, 0.5);
+      .setOrigin(0, 0.5)
+      .setScrollFactor(0);
     this.superFill = this.add
       .rectangle(54, 52, 216, 10, 0xfacc15)
-      .setOrigin(0, 0.5);
+      .setOrigin(0, 0.5)
+      .setScrollFactor(0);
 
     this.superText = this.add
       .text(280, 52, '', monoStyle({ fontSize: '12px', color: THEME.text }))
-      .setOrigin(0, 0.5);
+      .setOrigin(0, 0.5)
+      .setScrollFactor(0);
 
     // Flash cuando el Super está listo
     this.superReadyFlash = this.add
@@ -377,7 +409,8 @@ export class GameScene extends Phaser.Scene {
         fontStyle: 'bold',
       }))
       .setOrigin(0, 0.5)
-      .setAlpha(0);
+      .setAlpha(0)
+      .setScrollFactor(0);
 
     // ---- Slots de arma 1/2/3 (1 y 2 del loadout, 3 = cuchillo) ----
     const slotLabels: Array<[string, string]> = [
@@ -398,13 +431,15 @@ export class GameScene extends Phaser.Scene {
       // Fondo del slot
       this.add
         .rectangle(x, slotY, slotW, 40, 0x000000, 0.4)
-        .setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(THEME.border).color);
+        .setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(THEME.border).color)
+        .setScrollFactor(0);
 
       // Highlight del slot activo
       const hl = this.add
         .rectangle(x, slotY, slotW, 40, 0x000000, 0)
         .setStrokeStyle(2, Phaser.Display.Color.HexStringToColor(THEME.accent).color)
-        .setAlpha(0);
+        .setAlpha(0)
+        .setScrollFactor(0);
       this.slotHighlights.push(hl);
 
       // Icono + número
@@ -413,7 +448,8 @@ export class GameScene extends Phaser.Scene {
           fontSize: '16px',
           color: THEME.text,
         }))
-        .setOrigin(0.5);
+        .setOrigin(0.5)
+        .setScrollFactor(0);
 
       // Nombre del arma
       this.add
@@ -422,8 +458,19 @@ export class GameScene extends Phaser.Scene {
           color: THEME.secondary,
           letterSpacing: 1,
         }))
-        .setOrigin(0.5);
+        .setOrigin(0.5)
+        .setScrollFactor(0);
     });
+
+    // ---- Munición (cargador) ----
+    this.ammoText = this.add
+      .text(width / 2, this.scale.height - 84, '', monoStyle({
+        fontSize: '16px',
+        color: THEME.text,
+        fontStyle: 'bold',
+      }))
+      .setOrigin(0.5)
+      .setScrollFactor(0);
 
     this.onWeaponChanged({ slot: this.player.activeSlot });
   }
@@ -442,6 +489,17 @@ export class GameScene extends Phaser.Scene {
     const superPct = Math.min(1, power / required);
     this.superFill?.setScale(Math.max(0, superPct), 1);
     this.superText?.setText(power >= required ? 'LISTO (Q)' : `${Math.floor(superPct * 100)}%`);
+
+    // Munición del arma activa
+    const weapon = this.player.activeWeapon;
+    if (weapon) {
+      const ammo = weapon.ammoLeft;
+      const mag = weapon.magSize;
+      const reloading = weapon.isReloading ? ' RECARGANDO...' : '';
+      this.ammoText?.setText(`${ammo}/${mag}${reloading}`);
+    } else {
+      this.ammoText?.setText('∞'); // cuchillo
+    }
   }
 
   // ============================================================
@@ -477,7 +535,8 @@ export class GameScene extends Phaser.Scene {
         fontStyle: 'bold',
       }))
       .setOrigin(0.5)
-      .setDepth(20);
+      .setDepth(20)
+      .setScrollFactor(0);
   }
 
   // ============================================================

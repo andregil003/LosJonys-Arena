@@ -9,8 +9,8 @@ import { GameScene } from './scenes/GameScene';
 
 export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
-  width: GAME_CONSTANTS.ARENA_WIDTH,
-  height: GAME_CONSTANTS.ARENA_HEIGHT,
+  width: GAME_CONSTANTS.VIEW_WIDTH,
+  height: GAME_CONSTANTS.VIEW_HEIGHT,
   parent: 'game-container',
   backgroundColor: '#0f0f0f',
   dom: {

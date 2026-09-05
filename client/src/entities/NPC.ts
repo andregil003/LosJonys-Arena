@@ -35,6 +35,8 @@ export class NPC implements Damageable {
   private targetY = 0;
   private readonly arenaW: number;
   private readonly arenaH: number;
+  /** Paredes del mapa (bloquean disparos) — las setea GameScene. */
+  private walls: Phaser.GameObjects.Rectangle[] = [];
 
   constructor(scene: Phaser.Scene, x: number, y: number, name: string, color: string) {
     this.scene = scene;
@@ -67,6 +69,11 @@ export class NPC implements Damageable {
     this.targetY = y;
   }
 
+  /** Paredes del mapa (bloquean disparos). */
+  setWalls(walls: Phaser.GameObjects.Rectangle[]): void {
+    this.walls = walls;
+  }
+
   /** IA: moverse hacia el objetivo y dispararle. `now` en ms. */
   update(now: number, targets: Damageable[]): void {
     if (!this.alive) return;
@@ -97,9 +104,22 @@ export class NPC implements Damageable {
       this.body.setVelocity(0, 0);
     }
 
-    // Disparo: apuntar al objetivo, con algo de imprecisión
-    const fireAngle = Phaser.Math.Angle.Between(this.gameObject.x, this.gameObject.y, tx, ty);
-    this.weapon.fire(this.gameObject.x, this.gameObject.y, fireAngle, targets, now);
+    // Disparo: apuntar al objetivo con miss rate — fallan más lejos y
+    // mucho más si el objetivo se está moviendo
+    const baseAngle = Phaser.Math.Angle.Between(this.gameObject.x, this.gameObject.y, tx, ty);
+    let inaccuracy = GAME_CONSTANTS.BOT_MISS_RATE_BASE;
+    inaccuracy += nearestDist * GAME_CONSTANTS.BOT_MISS_RATE_PER_DIST;
+    const targetBody = nearest.gameObject.body as Phaser.Physics.Arcade.Body | null;
+    if (targetBody) {
+      const targetSpeed = Math.hypot(targetBody.velocity.x, targetBody.velocity.y);
+      inaccuracy += targetSpeed * GAME_CONSTANTS.BOT_MISS_RATE_PER_SPEED;
+    }
+    const fireAngle = baseAngle + Phaser.Math.FloatBetween(-inaccuracy, inaccuracy);
+    this.weapon.fire(this.gameObject.x, this.gameObject.y, fireAngle, targets, now, this.walls);
+    // Recarga automática cuando el cargador se vacía
+    if (this.weapon.isEmpty && !this.weapon.isReloading) {
+      this.weapon.reload();
+    }
 
     // "Pensar" cada 1.5s: elegir un punto de patrulla si no hay objetivo cercano
     if (now - this.lastThinkAt > 1500) {

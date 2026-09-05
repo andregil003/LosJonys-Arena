@@ -41,6 +41,8 @@ export interface WeaponStats {
   projectileSpeed: number; // px/s
   /** true = hitscan/instantáneo, false = proyectil */
   hitscan: boolean;
+  /** Tamaño del cargador (disparos antes de recargar con R) */
+  magSize: number;
 }
 
 export interface PowerStats {
@@ -110,9 +112,12 @@ export const GameEvents = {
 // ============================================================
 
 export const GAME_CONSTANTS = {
-  /** Tamaño de la arena en px */
-  ARENA_WIDTH: 1280,
-  ARENA_HEIGHT: 720,
+  /** Tamaño del MUNDO de la arena en px (la cámara sigue al jugador) */
+  ARENA_WIDTH: 2560,
+  ARENA_HEIGHT: 1440,
+  /** Tamaño del viewport (pantalla) en px */
+  VIEW_WIDTH: 1280,
+  VIEW_HEIGHT: 720,
   /** Velocidad base del Jony en px/s */
   BASE_SPEED: 200,
   /** Bonus de velocidad con cuchillo en mano */
@@ -127,4 +132,14 @@ export const GAME_CONSTANTS = {
   MAX_PLAYERS: 6,
   /** Tick rate del servidor en Hz */
   SERVER_TICK_RATE: 30,
+  /** Duración del countdown inicial en segundos */
+  COUNTDOWN_SECONDS: 10,
+  /** Miss rate del jugador (radianes de desviación aleatoria al disparar) — bajo pero existe */
+  PLAYER_MISS_RATE: 0.02,
+  /** Miss rate base de los bots (radianes) */
+  BOT_MISS_RATE_BASE: 0.06,
+  /** Miss rate extra de los bots por px de distancia al objetivo */
+  BOT_MISS_RATE_PER_DIST: 0.0002,
+  /** Miss rate extra de los bots por px/s de velocidad del objetivo (fallan más si se mueve) */
+  BOT_MISS_RATE_PER_SPEED: 0.0004,
 } as const;

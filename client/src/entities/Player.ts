@@ -48,6 +48,10 @@ export class Player implements Damageable {
   private keyShift: Phaser.Input.Keyboard.Key;
   private weapons: [Weapon, Weapon]; // arma 1 y arma 2 del loadout
   private knifeCooldownUntil = 0;
+  /** Paredes del mapa (bloquean disparos) — las setea GameScene. */
+  private walls: Phaser.GameObjects.Rectangle[] = [];
+  /** Combate habilitado (false durante el countdown — no dispara ni gasta munición). */
+  private combatEnabled = true;
 
   constructor(scene: Phaser.Scene, jony: JonyConfig, x: number, y: number) {
     this.scene = scene;
@@ -103,6 +107,16 @@ export class Player implements Damageable {
     return this.gameObject.y;
   }
 
+  /** Paredes del mapa (bloquean disparos). */
+  setWalls(walls: Phaser.GameObjects.Rectangle[]): void {
+    this.walls = walls;
+  }
+
+  /** Habilita/deshabilita el combate (countdown lo deshabilita). */
+  setCombatEnabled(enabled: boolean): void {
+    this.combatEnabled = enabled;
+  }
+
   /** Arma activa (null si el cuchillo está en mano). */
   get activeWeapon(): Weapon | null {
     return this.activeSlot === 3 ? null : this.weapons[this.activeSlot - 1];
@@ -114,7 +128,7 @@ export class Player implements Damageable {
     return this.activeSlot === 3 ? base * (1 + GAME_CONSTANTS.KNIFE_SPEED_BONUS) : base;
   }
 
-  update(time: number, targets: Damageable[]): void {
+update(time: number, targets: Damageable[]): void {
     if (!this.alive) return;
 
     this.handleMovement();
@@ -122,22 +136,30 @@ export class Player implements Damageable {
     this.handleReload();
     this.handlePower();
 
-    // Apuntar al mouse
+    // Apuntar al mouse: en Phaser 4 pointer.worldX NO incluye el scroll de la cámara,
+    // así que calculamos las coordenadas de mundo manualmente (screen + scroll).
     const pointer = this.scene.input.activePointer;
-    const angle = Phaser.Math.Angle.Between(this.x, this.y, pointer.worldX, pointer.worldY);
+    const cam = this.scene.cameras.main;
+    const wx = pointer.x + cam.scrollX;
+    const wy = pointer.y + cam.scrollY;
+    // Miss rate bajo del jugador: pequeña desviación aleatoria del ángulo
+    const inaccuracy = GAME_CONSTANTS.PLAYER_MISS_RATE;
+    const angle = Phaser.Math.Angle.Between(this.x, this.y, wx, wy) + Phaser.Math.FloatBetween(-inaccuracy, inaccuracy);
 
-    // Disparar / cuchillo con clic
-    if (pointer.isDown) {
+    // Disparar / cuchillo con clic (bloqueado durante el countdown)
+    if (pointer.isDown && this.combatEnabled) {
       if (this.activeSlot === 3) {
         this.tryKnife(time, targets);
       } else {
-        this.activeWeapon?.fire(this.x, this.y, angle, targets, time);
-        // Enviar la acción de disparo al servidor (multiplayer autoritativo)
-        network.sendShoot(angle);
+        this.activeWeapon?.fire(this.x, this.y, angle, targets, time, this.walls);
+        // Recarga automática cuando el cargador se vacía
+        if (this.activeWeapon?.isEmpty && !this.activeWeapon.isReloading) {
+          this.activeWeapon.reload();
+        }
       }
     }
 
-    // Nombre sigue al jugador
+// Nombre sigue al jugador
     this.nameText.setPosition(this.x, this.y - 28);
   }
 

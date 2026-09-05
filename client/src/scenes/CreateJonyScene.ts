@@ -594,8 +594,8 @@ export class CreateJonyScene extends Phaser.Scene {
     // Persistir
     saveJony(this.jony);
 
-    // TODO: ir a ModeSelectScene cuando exista
-    this.scene.start('GameScene');
+    // Ir a selección de modo
+    this.scene.start('ModeSelectScene');
   }
 
   shutdown(): void {

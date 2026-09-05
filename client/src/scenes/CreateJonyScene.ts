@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { TuringBackground } from '../ui/TuringBackground';
-import { THEME, monoStyle, sansStyle } from '../ui/theme';
+import { THEME, monoStyle, sansStyle, monoFaStyle } from '../ui/theme';
+import { fa } from '../ui/icons';
 import {
   COLORS,
   ACCESSORIES,
@@ -303,10 +304,10 @@ export class CreateJonyScene extends Phaser.Scene {
     // ============================================================
     // Botones inferiores
     // ============================================================
-    const backBtn = this.createActionButton(width / 2 - 120, height - 60, '◀ VOLVER', false);
+    const backBtn = this.createActionButton(width / 2 - 120, height - 60, `${fa('arrowLeft')}  VOLVER`, false);
     backBtn.on('pointerdown', () => this.scene.start('MenuScene'));
 
-    const continueBtn = this.createActionButton(width / 2 + 120, height - 60, 'CONTINUAR ▶', true);
+    const continueBtn = this.createActionButton(width / 2 + 120, height - 60, `CONTINUAR  ${fa('arrowRight')}`, true);
     continueBtn.on('pointerdown', () => this.onContinue());
 
     // Versión
@@ -442,7 +443,7 @@ export class CreateJonyScene extends Phaser.Scene {
   /** Botón de acción inferior (VOLVER / CONTINUAR) */
   private createActionButton(x: number, y: number, label: string, primary: boolean): Phaser.GameObjects.Text {
     const btn = this.add
-      .text(x, y, label, monoStyle({
+      .text(x, y, label, monoFaStyle({
         fontSize: '18px',
         color: primary ? THEME.bg : THEME.text,
         backgroundColor: primary ? THEME.accent : THEME.bg,
@@ -594,8 +595,8 @@ export class CreateJonyScene extends Phaser.Scene {
     // Persistir
     saveJony(this.jony);
 
-    // TODO: ir a ModeSelectScene cuando exista
-    this.scene.start('GameScene');
+    // Ir a selección de modo
+    this.scene.start('ModeSelectScene');
   }
 
   shutdown(): void {

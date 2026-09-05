@@ -25,6 +25,10 @@ export const THEME = {
   fontMono: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
   /** Tipografía sans (cuerpo) */
   fontSans: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  /** Tipografía mono + FontAwesome (iconos FA + texto en el mismo string) */
+  fontMonoFa: "'Font Awesome 6 Free', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
+  /** Tipografía sans + FontAwesome */
+  fontSansFa: "'Font Awesome 6 Free', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
 } as const;
 
 /** Helper: crea un estilo de texto Phaser con la fuente mono del tema. */
@@ -40,6 +44,24 @@ export function monoStyle(overrides: Phaser.Types.GameObjects.Text.TextStyle = {
 export function sansStyle(overrides: Phaser.Types.GameObjects.Text.TextStyle = {}): Phaser.Types.GameObjects.Text.TextStyle {
   return {
     fontFamily: THEME.fontSans,
+    color: THEME.text,
+    ...overrides,
+  };
+}
+
+/** Helper: estilo mono + FontAwesome (iconos FA mezclados con texto mono). */
+export function monoFaStyle(overrides: Phaser.Types.GameObjects.Text.TextStyle = {}): Phaser.Types.GameObjects.Text.TextStyle {
+  return {
+    fontFamily: THEME.fontMonoFa,
+    color: THEME.text,
+    ...overrides,
+  };
+}
+
+/** Helper: estilo sans + FontAwesome (iconos FA mezclados con texto sans). */
+export function sansFaStyle(overrides: Phaser.Types.GameObjects.Text.TextStyle = {}): Phaser.Types.GameObjects.Text.TextStyle {
+  return {
+    fontFamily: THEME.fontSansFa,
     color: THEME.text,
     ...overrides,
   };

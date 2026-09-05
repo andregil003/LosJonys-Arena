@@ -122,16 +122,16 @@ export class NetworkManager {
     this.room?.send('move', { x, y });
   }
 
-  sendShoot(): void {
-    this.room?.send('shoot');
+  sendShoot(angle: number): void {
+    this.room?.send('shoot', { angle });
   }
 
-  sendKnife(): void {
-    this.room?.send('knife');
+  sendKnife(angle: number): void {
+    this.room?.send('knife', { angle });
   }
 
-  sendPower(): void {
-    this.room?.send('power');
+  sendPower(angle: number): void {
+    this.room?.send('power', { angle });
   }
 
   disconnect(): void {

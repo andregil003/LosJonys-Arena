@@ -38,8 +38,8 @@ export interface WeaponChangedPayload {
 }
 
 const VOLUME = {
-  lobby: 0.55,
-  weapon: 0.7,
+  lobby: 0.275,
+  weapon: 0.35,
 } as const;
 
 class MusicSystemImpl {

@@ -37,6 +37,9 @@ export class NPC implements Damageable {
   private readonly arenaH: number;
   /** Paredes del mapa (bloquean disparos) — las setea GameScene. */
   private walls: Phaser.GameObjects.Rectangle[] = [];
+  /** Visual de muerte (círculo rojo + 💀) — se crea al morir, ya no hay respawn. */
+  private deathCircle: Phaser.GameObjects.Arc | null = null;
+  private deathText: Phaser.GameObjects.Text | null = null;
 
   constructor(scene: Phaser.Scene, x: number, y: number, name: string, color: string) {
     this.scene = scene;
@@ -127,31 +130,44 @@ export class NPC implements Damageable {
       this.targetX = Phaser.Math.Between(80, this.arenaW - 80);
       this.targetY = Phaser.Math.Between(80, this.arenaH - 80);
     }
+
+    // El nombre sigue al bot (antes se quedaba flotando donde spawnearon)
+    this.nameText.setPosition(this.gameObject.x, this.gameObject.y - 28);
   }
 
   /** Recibe daño (también carga la Super con el daño recibido). */
   takeDamage(amount: number): number {
     const real = applyDamage(this, amount);
     if (real > 0) addPowerCharge(this, real);
+    if (!this.alive) this.showDeath();
     return real;
   }
 
-  /** Revive en una posición nueva (FFA: los bots respawnean tras morir). */
-  respawn(x: number, y: number): void {
-    this.hp = this.maxHp;
-    this.alive = true;
-    this.powerCharge = 0;
-    this.gameObject.setPosition(x, y);
-    this.nameText.setPosition(x, y - 28);
-    this.body.enable = true;
-    this.body.reset(x, y);
-    this.targetX = x;
-    this.targetY = y;
+  /** Muestra el estado muerto: círculo rojo + 💀. Ya no hay respawn. */
+  private showDeath(): void {
+    // Ocultar el cuerpo y el nombre (el bot está muerto)
+    this.gameObject.setVisible(false);
+    this.nameText.setVisible(false);
+    this.body.enable = false;
+
+    // Círculo rojo en la posición de la muerte
+    this.deathCircle = this.scene.add
+      .circle(this.gameObject.x, this.gameObject.y, 16, 0xdc2626, 0.6)
+      .setStrokeStyle(2, Phaser.Display.Color.HexStringToColor('#7f1d1d').color);
+
+    // Emoji 💀 encima
+    this.deathText = this.scene.add
+      .text(this.gameObject.x, this.gameObject.y - 28, '💀', {
+        fontSize: '20px',
+      })
+      .setOrigin(0.5);
   }
 
   destroy(): void {
     this.gameObject.destroy();
     this.nameText.destroy();
+    this.deathCircle?.destroy();
+    this.deathText?.destroy();
     this.body.enable = false;
   }
 }

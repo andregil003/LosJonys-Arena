@@ -70,10 +70,10 @@ function playUrl(scene: Phaser.Scene, url: string): void {
     // Carga bajo demanda la primera vez (evita romper escenas sin preload).
     scene.load.audio(key, url);
     scene.load.once(Phaser.Loader.Events.COMPLETE, () => {
-      if (scene.cache.audio.exists(key)) scene.sound.play(key, { volume: 0.9 });
+      if (scene.cache.audio.exists(key)) scene.sound.play(key, { volume: 0.45 });
     });
     scene.load.start();
     return;
   }
-  scene.sound.play(key, { volume: 0.9 });
+  scene.sound.play(key, { volume: 0.45 });
 }

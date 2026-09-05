@@ -4,6 +4,7 @@ import { THEME, monoStyle, sansStyle, monoFaStyle } from '../ui/theme';
 import { ICONS, iconStyle, fa } from '../ui/icons';
 import { GAME_CONSTANTS } from '../types';
 import { loadJony } from '../data/catalog';
+import { network } from '../systems/network';
 import type { GameMode } from '../types';
 
 /**
@@ -28,6 +29,8 @@ export class LobbyScene extends Phaser.Scene {
   private mode: GameMode = 'ffa';
   private timeLeft = GAME_CONSTANTS.LOBBY_SECONDS;
   private ready = false;
+  private remotePlayers = 0;
+  private soloPopup?: Phaser.GameObjects.Container;
 
   private timerText?: Phaser.GameObjects.Text;
   private readyBtn?: Phaser.GameObjects.Text;
@@ -43,6 +46,8 @@ export class LobbyScene extends Phaser.Scene {
     this.mode = data.mode ?? 'ffa';
     this.timeLeft = GAME_CONSTANTS.LOBBY_SECONDS;
     this.ready = false;
+    this.remotePlayers = 0;
+    this.soloPopup = undefined;
   }
 
   create(): void {
@@ -51,6 +56,9 @@ export class LobbyScene extends Phaser.Scene {
 
     // Fondo animado de Turing
     this.bg = new TuringBackground(this, { accent: THEME.accent, maxAlpha: 160 });
+
+    // Conectar al servidor para contar jugadores (no bloquea si falla)
+    this.connectToServer(jony);
 
     // ============================================================
     // Header
@@ -291,11 +299,137 @@ export class LobbyScene extends Phaser.Scene {
   // ============================================================
 
   private toggleReady(): void {
+    // Si ya está listo y aparece el popup, no hacer nada (evitar doble toggle)
+    if (this.soloPopup) return;
+
     this.ready = !this.ready;
     const color = this.ready ? '#22c55e' : THEME.accent;
     this.readyBtn?.setBackgroundColor(color);
     this.readyBtn?.setText(this.ready ? `${fa('check')}  LISTO` : `${fa('check')}  LISTO`);
     this.readyBorder?.setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(color).color);
+
+    // Si se puso LISTO y está solo → popup "¿Jugar solitario?"
+    if (this.ready && this.remotePlayers === 0) {
+      this.showSoloPopup();
+    }
+  }
+
+  // ============================================================
+  // Popup "¿Jugar solitario?"
+  // ============================================================
+
+  private showSoloPopup(): void {
+    const { width, height } = this.scale;
+
+    // Fondo oscuro que bloquea el resto
+    const overlay = this.add
+      .rectangle(width / 2, height / 2, width, height, 0x000000, 0.7)
+      .setDepth(50)
+      .setInteractive();
+
+    // Panel
+    const panelW = 460;
+    const panelH = 240;
+    const panel = this.add
+      .rectangle(width / 2, height / 2, panelW, panelH, 0x111111, 1)
+      .setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(THEME.accent).color)
+      .setDepth(51);
+
+    // Título
+    this.add
+      .text(width / 2, height / 2 - 70, '¿JUGAR SOLITARIO?', monoStyle({
+        fontSize: '22px',
+        color: THEME.accent,
+        fontStyle: 'bold',
+        letterSpacing: 2,
+      }))
+      .setOrigin(0.5)
+      .setDepth(52);
+
+    // Subtítulo
+    this.add
+      .text(width / 2, height / 2 - 30, 'No hay nadie más en el lobby.\n¿Quieres jugar contra bots?', monoStyle({
+        fontSize: '13px',
+        color: THEME.secondary,
+        align: 'center',
+        lineSpacing: 6,
+      }))
+      .setOrigin(0.5)
+      .setDepth(52);
+
+    // Botón SÍ (con bots)
+    const yesBtn = this.add
+      .text(width / 2 - 110, height / 2 + 60, `${fa('gamepad')}  SÍ, CON BOTS`, monoFaStyle({
+        fontSize: '16px',
+        color: THEME.bg,
+        backgroundColor: THEME.accent,
+        padding: { x: 20, y: 12 },
+      }))
+      .setOrigin(0.5)
+      .setDepth(52)
+      .setInteractive({ useHandCursor: true });
+
+    // Botón NO (esperar)
+    const noBtn = this.add
+      .text(width / 2 + 110, height / 2 + 60, 'NO, ESPERAR', monoStyle({
+        fontSize: '16px',
+        color: THEME.text,
+        backgroundColor: THEME.bg,
+        padding: { x: 20, y: 12 },
+      }))
+      .setOrigin(0.5)
+      .setDepth(52)
+      .setInteractive({ useHandCursor: true });
+
+    // Contenedor para poder destruir todo junto
+    this.soloPopup = this.add.container(0, 0, [overlay, panel, yesBtn, noBtn]).setDepth(50);
+
+    yesBtn.on('pointerdown', () => this.startSoloGame());
+    noBtn.on('pointerdown', () => this.closeSoloPopup());
+  }
+
+  private closeSoloPopup(): void {
+    this.soloPopup?.destroy();
+    this.soloPopup = undefined;
+    // Volver a "no listo" para que pueda reintentar
+    this.ready = false;
+    this.readyBtn?.setBackgroundColor(THEME.accent);
+    this.readyBorder?.setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(THEME.accent).color);
+  }
+
+  private startSoloGame(): void {
+    this.soloPopup?.destroy();
+    this.soloPopup = undefined;
+    this.countdownEvent?.remove();
+    this.countdownEvent = undefined;
+    // Desconectar del servidor (partida local)
+    network.disconnect();
+    this.scene.start('GameScene', { mode: this.mode, solo: true });
+  }
+
+  // ============================================================
+  // Red (contar jugadores)
+  // ============================================================
+
+  private async connectToServer(jony: ReturnType<typeof loadJony>): Promise<void> {
+    if (!jony) return;
+    try {
+      await network.joinRoom(jony, this.mode);
+      // Contar jugadores remotos desde el estado del servidor
+      const room = network.currentRoom;
+      if (room?.state?.players) {
+        this.remotePlayers = room.state.players.size - 1; // -1 = el propio
+        if (this.remotePlayers < 0) this.remotePlayers = 0;
+      }
+      // Escuchar cambios de estado (entrada/salida de jugadores)
+      room?.onStateChange((state) => {
+        const size = state.players?.size ?? 1;
+        this.remotePlayers = Math.max(0, size - 1);
+      });
+    } catch {
+      // Sin servidor: asumimos solos (offline)
+      this.remotePlayers = 0;
+    }
   }
 
   shutdown(): void {
@@ -303,5 +437,7 @@ export class LobbyScene extends Phaser.Scene {
     this.bg = undefined;
     this.countdownEvent?.remove();
     this.countdownEvent = undefined;
+    this.soloPopup?.destroy();
+    this.soloPopup = undefined;
   }
 }

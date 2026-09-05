@@ -5,6 +5,7 @@ import { loadJony } from '../data/catalog';
 import { THEME, monoStyle, monoFaStyle } from '../ui/theme';
 import { ICONS, fa, iconStyle } from '../ui/icons';
 import { Player } from '../entities/Player';
+import { NPC } from '../entities/NPC';
 import type { Damageable } from '../systems/combat';
 import { WEAPONS } from '../systems/weapon-catalog';
 
@@ -48,6 +49,7 @@ export class GameScene extends Phaser.Scene {
   private player!: Player;
   private dummies: Damageable[] = [];
   private mode: GameMode = 'ffa';
+  private solo = false;
   private netStatus?: Phaser.GameObjects.Text;
 
   // HUD
@@ -63,8 +65,9 @@ export class GameScene extends Phaser.Scene {
     super('GameScene');
   }
 
-  init(data: { mode?: GameMode }): void {
+  init(data: { mode?: GameMode; solo?: boolean }): void {
     this.mode = data.mode ?? 'ffa';
+    this.solo = data.solo ?? false;
   }
 
   create(): void {
@@ -86,7 +89,11 @@ export class GameScene extends Phaser.Scene {
     this.player = new Player(this, jony ?? fallback, width / 2, height / 2);
 
     // Dummies de prueba (placeholder hasta que Shrek ponga enemigos reales)
-    this.createDummies();
+    if (this.solo) {
+      this.createNpcs();
+    } else {
+      this.createDummies();
+    }
 
     // HUD
     this.createHud();
@@ -132,6 +139,13 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    // Actualizar NPCs (modo solitario): atacan al jugador
+    for (const d of this.dummies) {
+      if (d instanceof NPC) {
+        d.update(time, [this.player]);
+      }
+    }
+
     this.updateHud();
   }
 
@@ -140,6 +154,9 @@ export class GameScene extends Phaser.Scene {
     EventBus.off(GameEvents.POWER_READY, this.onPowerReady, this);
     EventBus.off(GameEvents.PLAYER_DIED, this.onPlayerDied, this);
     this.player?.destroy();
+    for (const d of this.dummies) {
+      if (d instanceof NPC) d.destroy();
+    }
     this.dummies = [];
   }
 
@@ -155,6 +172,22 @@ export class GameScene extends Phaser.Scene {
       [width * 0.5, height * 0.7, 'DUMMY 3', '#a855f7'],
     ];
     this.dummies = spots.map(([x, y, name, color]) => new Dummy(this, x, y, name, color));
+  }
+
+  // ============================================================
+  // NPCs (modo solitario)
+  // ============================================================
+
+  private createNpcs(): void {
+    const { width, height } = this.scale;
+    const spots: Array<[number, number, string, string]> = [
+      [width * 0.2, height * 0.25, 'BOT 1', '#ef4444'],
+      [width * 0.8, height * 0.3, 'BOT 2', '#3b82f6'],
+      [width * 0.3, height * 0.75, 'BOT 3', '#a855f7'],
+      [width * 0.75, height * 0.7, 'BOT 4', '#f97316'],
+      [width * 0.5, height * 0.15, 'BOT 5', '#22c55e'],
+    ];
+    this.dummies = spots.map(([x, y, name, color]) => new NPC(this, x, y, name, color));
   }
 
   // ============================================================

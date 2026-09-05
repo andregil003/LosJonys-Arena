@@ -1,11 +1,11 @@
 /**
  * data/catalog.ts — Catálogo de personalización para la UI (Crea tu Jony).
  *
- * ⚠️ PROVISIONAL: los nombres/descripciones de armas y poderes son placeholders
- * hasta que Shrek entregue los stats reales (GDD Section 6).
- * Cuando los defina, solo hay que actualizar WEAPONS y POWERS aquí.
+ * ✅ ALINEADO con el catálogo REAL de Shrek (client/src/systems/weapon-catalog.ts
+ * y power-catalog.ts). Los stats de gameplay viven en systems/ (Shrek);
+ * aquí solo los datos de UI (nombres, taglines, colores).
  *
- * Territorio: PUCK (UI) — los stats de gameplay reales viven en entities/ (Shrek).
+ * Territorio: PUCK (UI).
  */
 
 import type { WeaponId, PowerId } from '../types';
@@ -52,7 +52,7 @@ export const ACCESSORIES: AccessoryOption[] = [
 ];
 
 // ============================================================
-// Armas (provisional — Shrek define stats reales)
+// Armas (alineado con systems/weapon-catalog.ts de Shrek)
 // ============================================================
 
 export interface WeaponOption {
@@ -64,15 +64,15 @@ export interface WeaponOption {
 }
 
 export const WEAPONS: WeaponOption[] = [
-  { id: 'w1', name: 'Pistola', tagline: 'Rápida y confiable', color: '#94a3b8' },
-  { id: 'w2', name: 'Escopeta', tagline: 'Corto alcance, mucho daño', color: '#f97316' },
-  { id: 'w3', name: 'Rifle', tagline: 'Preciso a media distancia', color: '#22d3ee' },
-  { id: 'w4', name: 'Lanzacohetes', tagline: 'Lento pero devastador', color: '#ef4444' },
-  { id: 'w5', name: 'Kamehameha', tagline: 'Carga y libera el rayo', color: '#a855f7' },
+  { id: 'w1', name: 'Escopeta', tagline: 'Abanico de 8 perdigones, letal de cerca', color: '#f97316' },
+  { id: 'w2', name: 'Rifle de asalto', tagline: 'Automático y fiable a media distancia', color: '#22d3ee' },
+  { id: 'w3', name: 'Sniper', tagline: 'Un tiro, daño inmenso; pide preparación', color: '#a855f7' },
+  { id: 'w4', name: 'SMG', tagline: 'Ráfaga rapidísima, puntería escasa', color: '#eab308' },
+  { id: 'w5', name: 'Lanzagranadas', tagline: 'Explota al impactar, hasta tras la cobertura', color: '#ef4444' },
 ];
 
 // ============================================================
-// Poderes (provisional — Shrek define stats reales)
+// Poderes (alineado con systems/power-catalog.ts de Shrek)
 // ============================================================
 
 export interface PowerOption {
@@ -83,11 +83,11 @@ export interface PowerOption {
 }
 
 export const POWERS: PowerOption[] = [
-  { id: 'p1', name: 'Escudo', description: 'Absorbe daño por unos segundos', color: '#22d3ee' },
-  { id: 'p2', name: 'Dash', description: 'Teletransporte corto en tu dirección', color: '#eab308' },
-  { id: 'p3', name: 'Curación', description: 'Regenera HP al instante', color: '#22c55e' },
-  { id: 'p4', name: 'Ralentizar', description: 'Ralentiza a los enemigos cercanos', color: '#a855f7' },
-  { id: 'p5', name: 'Super Kamehameha', description: 'Rayo gigante que atraviesa todo', color: '#ef4444' },
+  { id: 'p1', name: 'Kamehameha', description: 'Carga energía y dispara un rayo gigante que atraviesa todo', color: '#3b82f6' },
+  { id: 'p2', name: 'Dash', description: 'Impulso veloz hacia donde apuntas, con frames de invencibilidad', color: '#eab308' },
+  { id: 'p3', name: 'Escudo', description: 'Burbuja que bloquea todo el daño durante unos segundos', color: '#22d3ee' },
+  { id: 'p4', name: 'Ceguera', description: 'Nube de humo que ciega a los enemigos en el área', color: '#a855f7' },
+  { id: 'p5', name: 'Teletransporte', description: 'Marca un punto y vuelve a él al activarlo de nuevo', color: '#22c55e' },
 ];
 
 // ============================================================

@@ -18,6 +18,7 @@ import type { JonyConfig, PowerId } from '../types';
 import { WEAPONS } from '../systems/weapon-catalog';
 import { applyDamage, addPowerCharge, consumePower, heal } from '../systems/combat';
 import type { Damageable } from '../systems/combat';
+import { network } from '../systems/network';
 import { Weapon } from './Weapon';
 
 export class Player implements Damageable {
@@ -131,6 +132,8 @@ export class Player implements Damageable {
         this.tryKnife(time, targets);
       } else {
         this.activeWeapon?.fire(this.x, this.y, angle, targets, time);
+        // Enviar la acción de disparo al servidor (multiplayer autoritativo)
+        network.sendShoot(angle);
       }
     }
 
@@ -180,6 +183,11 @@ export class Player implements Damageable {
   private handlePower(): void {
     if (Phaser.Input.Keyboard.JustDown(this.keyQ) || Phaser.Input.Keyboard.JustDown(this.keyShift)) {
       if (consumePower(this)) {
+        // Enviar la acción de poder al servidor (multiplayer autoritativo)
+        const pointer = this.scene.input.activePointer;
+        const angle = Phaser.Math.Angle.Between(this.x, this.y, pointer.worldX, pointer.worldY);
+        network.sendPower(angle);
+
         // TODO(Shrek): efecto real del poder (dash, escudo, kamehameha...)
         // Placeholder: flash cian
         const flash = this.scene.add.circle(this.x, this.y, 40, 0x22d3ee, 0.4).setDepth(6);
@@ -201,6 +209,11 @@ export class Player implements Damageable {
   private tryKnife(time: number, targets: Damageable[]): void {
     if (time < this.knifeCooldownUntil) return;
     this.knifeCooldownUntil = time + 400; // 0.4s entre cuchilladas
+
+    // Ángulo hacia el mouse (para el servidor)
+    const pointer = this.scene.input.activePointer;
+    const angle = Phaser.Math.Angle.Between(this.x, this.y, pointer.worldX, pointer.worldY);
+    network.sendKnife(angle);
 
     // Instakill al primer target vivo en rango melee
     for (const t of targets) {

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { TuringBackground } from '../ui/TuringBackground';
-import { THEME, monoStyle, sansStyle } from '../ui/theme';
+import { THEME, monoStyle, sansStyle, monoFaStyle } from '../ui/theme';
+import { fa } from '../ui/icons';
 import type { GameMode } from '../types';
 
 /**
@@ -57,7 +58,7 @@ export class ModeSelectScene extends Phaser.Scene {
       coopX, cardY, cardW, cardH,
       'COOP',
       'Jugadores contra la IA',
-      ['👥 Hasta 6 jugadores', '🛡️ Rondas de oleadas', '🎯 Pantalla tipo Valorant', '⏱️ Lobby 2:00'],
+      [`${fa('peopleGroup')}  Hasta 6 jugadores`, `${fa('shieldHalved')}  Rondas de oleadas`, `${fa('crosshairs')}  Pantalla tipo Valorant`, `${fa('timer')}  Lobby 2:00`],
       THEME.accent,
       'coop',
     );
@@ -69,7 +70,7 @@ export class ModeSelectScene extends Phaser.Scene {
       ffaX, cardY, cardW, cardH,
       'FFA',
       'Todos contra todos',
-      ['⚔️ Hasta 6 jugadores', '💀 Último en pie', '🗡️ Cuchillo instakill', '⏱️ Partida rápida'],
+      [`${fa('users')}  Hasta 6 jugadores`, `${fa('skull')}  Último en pie`, `${fa('gun')}  Cuchillo instakill`, `${fa('timer')}  Partida rápida`],
       '#f97316',
       'ffa',
     );
@@ -77,10 +78,10 @@ export class ModeSelectScene extends Phaser.Scene {
     // ============================================================
     // Botones inferiores
     // ============================================================
-    const backBtn = this.createActionButton(width / 2 - 120, height - 60, '◀ VOLVER', false);
+    const backBtn = this.createActionButton(width / 2 - 120, height - 60, `${fa('arrowLeft')}  VOLVER`, false);
     backBtn.on('pointerdown', () => this.scene.start('CreateJonyScene'));
 
-    const playBtn = this.createActionButton(width / 2 + 120, height - 60, 'JUGAR ▶', true);
+    const playBtn = this.createActionButton(width / 2 + 120, height - 60, `JUGAR  ${fa('arrowRight')}`, true);
     playBtn.on('pointerdown', () => {
       if (!this.selected) {
         // Feedback: parpadeo si no eligió modo
@@ -154,7 +155,7 @@ export class ModeSelectScene extends Phaser.Scene {
     // Características
     const featTexts = features.map((f, i) =>
       this.add
-        .text(0, -h / 2 + 155 + i * 32, f, monoStyle({
+        .text(0, -h / 2 + 155 + i * 32, f, monoFaStyle({
           fontSize: '14px',
           color: THEME.text,
         }))
@@ -224,7 +225,7 @@ export class ModeSelectScene extends Phaser.Scene {
 
   private createActionButton(x: number, y: number, label: string, primary: boolean): Phaser.GameObjects.Text {
     const btn = this.add
-      .text(x, y, label, monoStyle({
+      .text(x, y, label, monoFaStyle({
         fontSize: '18px',
         color: primary ? THEME.bg : THEME.text,
         backgroundColor: primary ? THEME.accent : THEME.bg,

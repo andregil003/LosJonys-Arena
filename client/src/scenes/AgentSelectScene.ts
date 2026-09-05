@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { TuringBackground } from '../ui/TuringBackground';
-import { THEME, monoStyle, sansStyle } from '../ui/theme';
+import { THEME, monoStyle, sansStyle, monoFaStyle } from '../ui/theme';
+import { fa } from '../ui/icons';
 import { GAME_CONSTANTS } from '../types';
 import { loadJony } from '../data/catalog';
 import type { GameMode } from '../types';
@@ -84,7 +85,7 @@ export class AgentSelectScene extends Phaser.Scene {
     // Botón CONFIRMAR → GameScene
     // ============================================================
     const confirmBtn = this.add
-      .text(width / 2, height - 60, 'CONFIRMAR ▶', monoStyle({
+      .text(width / 2, height - 60, `CONFIRMAR  ${fa('arrowRight')}`, monoFaStyle({
         fontSize: '20px',
         color: THEME.bg,
         backgroundColor: THEME.accent,
@@ -105,7 +106,7 @@ export class AgentSelectScene extends Phaser.Scene {
     // Volver al lobby
     // ============================================================
     const backBtn = this.add
-      .text(90, height - 60, '◀ LOBBY', monoStyle({
+      .text(90, height - 60, `${fa('arrowLeft')}  LOBBY`, monoFaStyle({
         fontSize: '16px',
         color: THEME.secondary,
       }))

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { TuringBackground } from '../ui/TuringBackground';
-import { THEME, monoStyle, sansStyle } from '../ui/theme';
+import { THEME, monoStyle, sansStyle, monoFaStyle } from '../ui/theme';
+import { fa } from '../ui/icons';
 import { GAME_CONSTANTS } from '../types';
 import { loadJony } from '../data/catalog';
 import type { GameMode } from '../types';
@@ -126,7 +127,7 @@ export class LobbyScene extends Phaser.Scene {
     // Botón LISTO (toggle verde/cian)
     // ============================================================
     this.readyBtn = this.add
-      .text(width / 2, height - 60, 'LISTO', monoStyle({
+      .text(width / 2, height - 60, `${fa('check')}  LISTO`, monoFaStyle({
         fontSize: '20px',
         color: THEME.bg,
         backgroundColor: THEME.accent,
@@ -147,7 +148,7 @@ export class LobbyScene extends Phaser.Scene {
     // Volver a selección de modo
     // ============================================================
     const backBtn = this.add
-      .text(90, height - 60, '◀ SALIR', monoStyle({
+      .text(90, height - 60, `${fa('arrowLeft')}  SALIR`, monoFaStyle({
         fontSize: '16px',
         color: THEME.secondary,
       }))
@@ -269,7 +270,7 @@ export class LobbyScene extends Phaser.Scene {
     this.ready = !this.ready;
     const color = this.ready ? '#22c55e' : THEME.accent;
     this.readyBtn?.setBackgroundColor(color);
-    this.readyBtn?.setText(this.ready ? '✓ LISTO' : 'LISTO');
+    this.readyBtn?.setText(this.ready ? `${fa('check')}  LISTO` : `${fa('check')}  LISTO`);
     this.readyBorder?.setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(color).color);
   }
 

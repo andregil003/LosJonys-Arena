@@ -6,10 +6,14 @@ import { THEME, monoStyle, monoFaStyle } from '../ui/theme';
 import { ICONS, fa, iconStyle } from '../ui/icons';
 import { Player } from '../entities/Player';
 import { NPC } from '../entities/NPC';
+import { RemotePlayer } from '../entities/RemotePlayer';
 import type { Damageable } from '../systems/combat';
 import { WEAPONS } from '../systems/weapon-catalog';
 import { generateMap, type WallRect } from '../systems/map-gen';
 import { pickRandomArena, type Arena } from '../systems/arenas';
+import { BackgroundSystem } from '../systems/backgrounds';
+import { MusicSystem } from '../systems/music-system';
+import type { ServerGameState } from '../systems/network';
 
 /**
  * GameScene — Arena de juego.
@@ -64,8 +68,8 @@ export class GameScene extends Phaser.Scene {
   private countdownActive = true;
   private countdownText?: Phaser.GameObjects.Text;
 
-  // Respawn de NPCs (FFA: los bots reviven tras morir)
-  private npcRespawns = new Map<NPC, number>();
+  // Jugadores remotos (multiplayer) — id del servidor → RemotePlayer
+  private remotePlayers = new Map<string, RemotePlayer>();
 
   // HUD
   private hpFill?: Phaser.GameObjects.Rectangle;
@@ -76,6 +80,7 @@ export class GameScene extends Phaser.Scene {
   private superReadyFlash?: Phaser.GameObjects.Text;
   private deathOverlay?: Phaser.GameObjects.Text;
   private ammoText?: Phaser.GameObjects.Text;
+  private killText?: Phaser.GameObjects.Text;
 
   constructor() {
     super('GameScene');
@@ -95,9 +100,8 @@ export class GameScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, GAME_CONSTANTS.ARENA_WIDTH, GAME_CONSTANTS.ARENA_HEIGHT);
     this.cameras.main.setBounds(0, 0, GAME_CONSTANTS.ARENA_WIDTH, GAME_CONSTANTS.ARENA_HEIGHT);
 
-    // Fondo de la arena (aleatoria del catálogo — Shrek agrega más)
-    this.add.rectangle(GAME_CONSTANTS.ARENA_WIDTH / 2, GAME_CONSTANTS.ARENA_HEIGHT / 2, GAME_CONSTANTS.ARENA_WIDTH, GAME_CONSTANTS.ARENA_HEIGHT, this.arena.backgroundColor);
-    this.arena.decorate?.(this, GAME_CONSTANTS.ARENA_WIDTH, GAME_CONSTANTS.ARENA_HEIGHT);
+    // Fondo de la arena: fondos animados de Shrek (rotativos cada 30s)
+    BackgroundSystem.installArena(this);
 
     // Mapa procedural: paredes aleatorias (no bloquean la zona de spawn)
     this.createWalls();
@@ -135,6 +139,9 @@ export class GameScene extends Phaser.Scene {
     // La cámara sigue al jugador
     this.cameras.main.startFollow(this.player.gameObject, true, 0.12, 0.12);
 
+    // Música de arena: canción del arma principal del Jony local
+    MusicSystem.init(this, this.player.jony.weapon1);
+
     // HUD
     this.createHud();
 
@@ -167,6 +174,7 @@ export class GameScene extends Phaser.Scene {
     EventBus.on(GameEvents.WEAPON_CHANGED, this.onWeaponChanged, this);
     EventBus.on(GameEvents.POWER_READY, this.onPowerReady, this);
     EventBus.on(GameEvents.PLAYER_DIED, this.onPlayerDied, this);
+    EventBus.on(GameEvents.SCENE_CHANGED, this.onServerState, this);
 
     // Volver al menú
     this.input.keyboard!.on('keydown-ESC', () => {
@@ -197,17 +205,8 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // Respawn de NPCs muertos (FFA: reviven a los 4s en posición alejada)
-    for (const d of this.dummies) {
-      if (!(d instanceof NPC) || d.alive) continue;
-      if (!this.npcRespawns.has(d)) {
-        this.npcRespawns.set(d, time + 4000);
-      } else if (time >= this.npcRespawns.get(d)!) {
-        const [x, y] = this.randomSpawn(200, 200);
-        d.respawn(x, y);
-        this.npcRespawns.delete(d);
-      }
-    }
+    // Respawn de NPCs eliminado: los bots ya NO reviven (muerte definitiva con 💀).
+    // El estado muerto visual lo maneja NPC.showDeath().
 
     this.updateHud();
   }
@@ -216,12 +215,15 @@ export class GameScene extends Phaser.Scene {
     EventBus.off(GameEvents.WEAPON_CHANGED, this.onWeaponChanged, this);
     EventBus.off(GameEvents.POWER_READY, this.onPowerReady, this);
     EventBus.off(GameEvents.PLAYER_DIED, this.onPlayerDied, this);
+    EventBus.off(GameEvents.SCENE_CHANGED, this.onServerState, this);
+    MusicSystem.stop();
     this.player?.destroy();
     for (const d of this.dummies) {
       if (d instanceof NPC) d.destroy();
     }
     this.dummies = [];
-    this.npcRespawns.clear();
+    this.remotePlayers.forEach((rp) => rp.destroy());
+    this.remotePlayers.clear();
     this.walls.forEach((w) => w.destroy());
     this.walls = [];
     this.countdownText?.destroy();
@@ -359,57 +361,70 @@ this.countdownText?.destroy();
     const { width } = this.scale;
     const jony = this.player.jony;
 
-    // ---- Barra de vida (heart) ----
+    // ---- Barra de vida (heart) — VERTICAL, se vacía de arriba hacia abajo ----
     this.add
-      .text(24, 24, ICONS.heart, iconStyle({ fontSize: '22px', color: '#ef4444' }))
+      .text(24, 24, ICONS.heart, iconStyle({ fontSize: '22px', color: '#22c55e' }))
       .setOrigin(0.5)
       .setScrollFactor(0);
 
+    // Fondo de la barra (marco)
     this.add
-      .rectangle(52, 24, 220, 14, 0x000000, 0.5)
+      .rectangle(52, 24, 14, 60, 0x000000, 0.5)
       .setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(THEME.border).color)
-      .setOrigin(0, 0.5)
+      .setOrigin(0.5, 0)
       .setScrollFactor(0);
+
+    // Relleno verde anclado abajo: al escalar en Y se vacía desde arriba
     this.hpFill = this.add
-      .rectangle(54, 24, 216, 10, 0xef4444)
-      .setOrigin(0, 0.5)
+      .rectangle(52, 26, 10, 56, 0x22c55e)
+      .setOrigin(0.5, 1)
       .setScrollFactor(0);
 
     this.hpText = this.add
-      .text(280, 24, '', monoStyle({ fontSize: '12px', color: THEME.text }))
+      .text(70, 24, '', monoStyle({ fontSize: '12px', color: THEME.text }))
       .setOrigin(0, 0.5)
       .setScrollFactor(0);
 
-    // ---- Barra de Super (zap) ----
+    // ---- Barra de Super (zap) — VERTICAL, igual que la vida ----
     this.add
-      .text(24, 52, ICONS.zap, iconStyle({ fontSize: '22px', color: '#facc15' }))
+      .text(24, 100, ICONS.zap, iconStyle({ fontSize: '22px', color: '#facc15' }))
       .setOrigin(0.5)
       .setScrollFactor(0);
 
     this.add
-      .rectangle(52, 52, 220, 14, 0x000000, 0.5)
+      .rectangle(52, 100, 14, 60, 0x000000, 0.5)
       .setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(THEME.border).color)
-      .setOrigin(0, 0.5)
+      .setOrigin(0.5, 0)
       .setScrollFactor(0);
     this.superFill = this.add
-      .rectangle(54, 52, 216, 10, 0xfacc15)
-      .setOrigin(0, 0.5)
+      .rectangle(52, 102, 10, 56, 0xfacc15)
+      .setOrigin(0.5, 1)
       .setScrollFactor(0);
 
     this.superText = this.add
-      .text(280, 52, '', monoStyle({ fontSize: '12px', color: THEME.text }))
+      .text(70, 100, '', monoStyle({ fontSize: '12px', color: THEME.text }))
       .setOrigin(0, 0.5)
       .setScrollFactor(0);
 
     // Flash cuando el Super está listo
     this.superReadyFlash = this.add
-      .text(52, 80, `${fa('zap')}  SUPER LISTO`, monoFaStyle({
+      .text(52, 172, `${fa('zap')}  SUPER LISTO`, monoFaStyle({
         fontSize: '14px',
         color: '#facc15',
         fontStyle: 'bold',
       }))
       .setOrigin(0, 0.5)
       .setAlpha(0)
+      .setScrollFactor(0);
+
+    // ---- Kill counter (esquina superior derecha, debajo del estado de red) ----
+    this.killText = this.add
+      .text(width - 10, 40, '💀 0', monoStyle({
+        fontSize: '18px',
+        color: '#f87171',
+        fontStyle: 'bold',
+      }))
+      .setOrigin(1, 0)
       .setScrollFactor(0);
 
     // ---- Slots de arma 1/2/3 (1 y 2 del loadout, 3 = cuchillo) ----
@@ -478,17 +493,20 @@ this.countdownText?.destroy();
   private updateHud(): void {
     if (!this.player.alive) return;
 
-    // Vida
+    // Vida (barra vertical: se vacía de arriba hacia abajo)
     const hpPct = this.player.hp / this.player.maxHp;
-    this.hpFill?.setScale(Math.max(0, hpPct), 1);
+    this.hpFill?.setScale(1, Math.max(0, hpPct));
     this.hpText?.setText(`${this.player.hp}/${this.player.maxHp}`);
 
-    // Super
+    // Super (barra vertical)
     const power = this.player.powerCharge;
     const required = 500; // chargeRequired del poder (placeholder: p1 = 500)
     const superPct = Math.min(1, power / required);
-    this.superFill?.setScale(Math.max(0, superPct), 1);
+    this.superFill?.setScale(1, Math.max(0, superPct));
     this.superText?.setText(power >= required ? 'LISTO (Q)' : `${Math.floor(superPct * 100)}%`);
+
+    // Kill counter
+    this.killText?.setText(`💀 ${this.player.kills}`);
 
     // Munición del arma activa
     const weapon = this.player.activeWeapon;
@@ -523,12 +541,24 @@ this.countdownText?.destroy();
     });
   }
 
-  private onPlayerDied(target: Damageable): void {
+  /** Payload de PLAYER_DIED: formato viejo (target directo) o nuevo (con killer). */
+type DiedPayload = Damageable | { target: Damageable; killer?: Damageable | null };
+
+  private onPlayerDied(payload: DiedPayload): void {
+    const target = 'target' in payload ? payload.target : payload;
+    const killer = 'target' in payload ? (payload.killer ?? null) : null;
+
+    // Kill counter: si el jugador mató a alguien (armas → killer del payload; cuchillo → local)
+    if (killer === this.player) {
+      this.player.registerKill();
+    }
+
+    // Overlay de muerte del jugador
     if (target !== this.player) return;
 
     const { width, height } = this.scale;
     this.deathOverlay = this.add
-      .text(width / 2, height / 2, 'HAS MUERTO\nESC para salir', monoStyle({
+      .text(width / 2, height / 2, '💀 HAS MUERTO\nESC para salir', monoStyle({
         fontSize: '32px',
         color: '#ef4444',
         align: 'center',
@@ -537,6 +567,42 @@ this.countdownText?.destroy();
       .setOrigin(0.5)
       .setDepth(20)
       .setScrollFactor(0);
+  }
+
+  // ============================================================
+  // Jugadores remotos (multiplayer)
+  // ============================================================
+
+  /** Sincroniza los RemotePlayers con el estado autoritativo del servidor. */
+  private onServerState(payload: { state?: ServerGameState; left?: boolean }): void {
+    if (payload.left) {
+      this.remotePlayers.forEach((rp) => rp.destroy());
+      this.remotePlayers.clear();
+      return;
+    }
+
+    const state = payload.state;
+    if (!state?.players) return;
+
+    const seen = new Set<string>();
+    state.players.forEach((ps, id) => {
+      if (id === network.sessionId) return; // el propio jugador
+      seen.add(id);
+      let rp = this.remotePlayers.get(id);
+      if (!rp) {
+        rp = new RemotePlayer(this, ps);
+        this.remotePlayers.set(id, rp);
+      }
+      rp.sync(ps);
+    });
+
+    // Eliminar los que se fueron de la sala
+    this.remotePlayers.forEach((rp, id) => {
+      if (!seen.has(id)) {
+        rp.destroy();
+        this.remotePlayers.delete(id);
+      }
+    });
   }
 
   // ============================================================

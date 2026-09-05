@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
-import { TuringBackground } from '../ui/TuringBackground';
 import { THEME, monoStyle, sansStyle, monoFaStyle } from '../ui/theme';
 import { ICONS, iconStyle, fa } from '../ui/icons';
 import { GAME_CONSTANTS } from '../types';
 import { loadJony } from '../data/catalog';
 import { network } from '../systems/network';
+import { BackgroundSystem } from '../systems/backgrounds';
+import { MusicSystem } from '../systems/music-system';
 import type { GameMode } from '../types';
 
 /**
@@ -24,8 +25,6 @@ import type { GameMode } from '../types';
  * Territorio: PUCK (escenas / UI).
  */
 export class LobbyScene extends Phaser.Scene {
-  private bg?: TuringBackground;
-
   private mode: GameMode = 'ffa';
   private timeLeft = GAME_CONSTANTS.LOBBY_SECONDS;
   private ready = false;
@@ -41,6 +40,11 @@ export class LobbyScene extends Phaser.Scene {
     super('LobbyScene');
   }
 
+  preload(): void {
+    // Canciones del lobby (music-lobby.mp3)
+    MusicSystem.preload(this);
+  }
+
   init(data: { mode?: GameMode }): void {
     // Reiniciar estado en cada entrada a la escena
     this.mode = data.mode ?? 'ffa';
@@ -54,8 +58,11 @@ export class LobbyScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const jony = loadJony();
 
-    // Fondo animado de Turing
-    this.bg = new TuringBackground(this, { accent: THEME.accent, maxAlpha: 160 });
+    // Fondo animado de Shrek: data-rain (lluvia de datos) — fijo en el lobby
+    BackgroundSystem.installLoading(this);
+
+    // Música del lobby
+    MusicSystem.playLobby(this);
 
     // Conectar al servidor para contar jugadores (no bloquea si falla)
     this.connectToServer(jony);
@@ -433,8 +440,7 @@ export class LobbyScene extends Phaser.Scene {
   }
 
   shutdown(): void {
-    this.bg?.destroy();
-    this.bg = undefined;
+    MusicSystem.stop();
     this.countdownEvent?.remove();
     this.countdownEvent = undefined;
     this.soloPopup?.destroy();

@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
-import { TuringBackground } from '../ui/TuringBackground';
 import { THEME, monoStyle, sansStyle } from '../ui/theme';
 import { ICONS, iconStyle } from '../ui/icons';
+import { BackgroundSystem } from '../systems/backgrounds';
+import { MusicSystem } from '../systems/music-system';
 
 /**
  * MenuScene — Menú principal de LosJonys Arena.
@@ -20,18 +21,23 @@ import { ICONS, iconStyle } from '../ui/icons';
  *    centrados en el mismo eje (antes el icono flotaba fuera y desalineado).
  */
 export class MenuScene extends Phaser.Scene {
-  private bg?: TuringBackground;
-
   constructor() {
     super('MenuScene');
+  }
+
+  preload(): void {
+    // Canciones del lobby (music-lobby.mp3)
+    MusicSystem.preload(this);
   }
 
   create(): void {
     const { width, height } = this.scale;
 
-    // Fondo animado de Turing (reacción-difusión), aleatorio en cada carga
-    // El canvas HTML se posiciona con z-index:0 en CSS (detrás del juego).
-    this.bg = new TuringBackground(this, { accent: THEME.accent, maxAlpha: 190 });
+    // Fondo animado de Shrek: data-rain (lluvia de datos) — fijo en el inicio
+    BackgroundSystem.installLoading(this);
+
+    // Música del lobby
+    MusicSystem.playLobby(this);
 
     // Eyebrow en mono (bien separado del título para evitar duplicado visual)
     this.add
@@ -122,7 +128,6 @@ export class MenuScene extends Phaser.Scene {
   }
 
   shutdown(): void {
-    this.bg?.destroy();
-    this.bg = undefined;
+    MusicSystem.stop();
   }
 }

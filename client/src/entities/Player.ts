@@ -32,6 +32,8 @@ export class Player implements Damageable {
   maxHp: number;
   alive = true;
   powerCharge = 0;
+  /** Kills del jugador (cuchillo local + killer del payload cuando Shrek lo emita). */
+  kills = 0;
 
   activeSlot: 1 | 2 | 3 = 1;
 
@@ -242,7 +244,7 @@ update(time: number, targets: Damageable[]): void {
       if (!t.alive) continue;
       const d = Phaser.Math.Distance.Between(this.x, this.y, t.gameObject.x, t.gameObject.y);
       if (d <= GAME_CONSTANTS.KNIFE_RANGE) {
-        const real = applyDamage(t, t.maxHp); // instakill
+        const real = applyDamage(t, t.maxHp, this); // instakill, killer = jugador
         addPowerCharge(t, real);
         // Feedback visual
         const spark = this.scene.add.circle(t.gameObject.x, t.gameObject.y, 20, 0xffffff, 0.5).setDepth(6);
@@ -272,6 +274,11 @@ update(time: number, targets: Damageable[]): void {
   /** Se cura sin pasar de maxHp. */
   heal(amount: number): number {
     return heal(this, amount);
+  }
+
+  /** Registra una kill del jugador (para el kill counter del HUD). */
+  registerKill(): void {
+    this.kills += 1;
   }
 
   destroy(): void {

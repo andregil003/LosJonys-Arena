@@ -32,6 +32,8 @@ export interface ServerPlayerState {
   powerCharge: number;
   alive: boolean;
   kills: number;
+  /** Equipo (0 = aliados, 1 = enemigos en COOP; único por jugador en FFA). */
+  team: number;
 }
 
 export interface ServerGameState {

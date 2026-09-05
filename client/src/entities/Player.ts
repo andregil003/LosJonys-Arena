@@ -68,7 +68,7 @@ export class Player implements Damageable {
     // Nombre sobre el jugador
     this.nameText = scene.add
       .text(x, y - 28, this.name, {
-        fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+        fontFamily: "'Nunito', 'Segoe UI', sans-serif",
         fontSize: '12px',
         color: '#fafafa',
       })

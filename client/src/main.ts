@@ -8,12 +8,17 @@ declare global {
   }
 }
 
-// Asegurar que FontAwesome esté cargada antes de renderizar textos con iconos
+// Asegurar que las fuentes estén cargadas antes de renderizar textos
 async function boot(): Promise<void> {
   try {
-    await document.fonts.load('900 16px "Font Awesome 6 Free"');
+    // FontAwesome (iconos) + Rajdhani (títulos/números) + Nunito (UI)
+    await Promise.all([
+      document.fonts.load('900 16px "Font Awesome 6 Free"'),
+      document.fonts.load('700 16px "Rajdhani"'),
+      document.fonts.load('700 16px "Nunito"'),
+    ]);
   } catch {
-    // Si falla la carga, el juego arranca igual (los iconos pueden no verse)
+    // Si falla la carga, el juego arranca igual (las fuentes pueden no verse)
   }
   const game = new Phaser.Game(gameConfig);
   window.__PHASER_GAME__ = game;

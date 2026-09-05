@@ -34,9 +34,9 @@ export class MenuScene extends Phaser.Scene {
       }))
       .setOrigin(0.5);
 
-    // Título principal
+    // Título principal (logo en Rajdhani)
     this.add
-      .text(width / 2, height / 2 - 100, 'LOSJONYS\nARENA', sansStyle({
+      .text(width / 2, height / 2 - 100, 'LOSJONYS\nARENA', monoStyle({
         fontSize: '72px',
         color: THEME.text,
         fontStyle: 'bold',

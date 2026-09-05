@@ -328,7 +328,8 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private onPlayerDied(target: Damageable): void {
+  private onPlayerDied(payload: { target: Damageable; killer: Damageable | null }): void {
+    const { target } = payload;
     if (target !== this.player) return;
 
     const { width, height } = this.scale;

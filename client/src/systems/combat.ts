@@ -37,15 +37,19 @@ export interface Damageable {
 /**
  * Aplica daño a un Damageable. Devuelve el daño real aplicado.
  * Emite PLAYER_DIED si la entidad llega a 0 HP.
+ *
+ * El payload del evento es `{ target, killer }`:
+ * - `target`: la entidad que murió (Damageable).
+ * - `killer`: quien la mató (Damageable) o `null` si murió sin autor (ej: zona).
  */
-export function applyDamage(target: Damageable, amount: number): number {
+export function applyDamage(target: Damageable, amount: number, killer: Damageable | null = null): number {
   if (!target.alive || amount <= 0) return 0;
   const real = Math.min(amount, target.hp);
   target.hp -= real;
   if (target.hp <= 0) {
     target.hp = 0;
     target.alive = false;
-    EventBus.emit(GameEvents.PLAYER_DIED, target);
+    EventBus.emit(GameEvents.PLAYER_DIED, { target, killer });
   }
   return real;
 }

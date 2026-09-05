@@ -99,7 +99,7 @@ export class NPC implements Damageable {
 
     // Disparo: apuntar al objetivo, con algo de imprecisión
     const fireAngle = Phaser.Math.Angle.Between(this.gameObject.x, this.gameObject.y, tx, ty);
-    this.weapon.fire(this.gameObject.x, this.gameObject.y, fireAngle, targets, now);
+    this.weapon.fire(this.gameObject.x, this.gameObject.y, fireAngle, targets, now, this);
 
     // "Pensar" cada 1.5s: elegir un punto de patrulla si no hay objetivo cercano
     if (now - this.lastThinkAt > 1500) {

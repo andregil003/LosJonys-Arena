@@ -130,7 +130,7 @@ export class Player implements Damageable {
       if (this.activeSlot === 3) {
         this.tryKnife(time, targets);
       } else {
-        this.activeWeapon?.fire(this.x, this.y, angle, targets, time);
+        this.activeWeapon?.fire(this.x, this.y, angle, targets, time, this);
       }
     }
 
@@ -207,7 +207,7 @@ export class Player implements Damageable {
       if (!t.alive) continue;
       const d = Phaser.Math.Distance.Between(this.x, this.y, t.gameObject.x, t.gameObject.y);
       if (d <= GAME_CONSTANTS.KNIFE_RANGE) {
-        const real = applyDamage(t, t.maxHp); // instakill
+        const real = applyDamage(t, t.maxHp, this); // instakill, killer = jugador
         addPowerCharge(t, real);
         // Feedback visual
         const spark = this.scene.add.circle(t.gameObject.x, t.gameObject.y, 20, 0xffffff, 0.5).setDepth(6);

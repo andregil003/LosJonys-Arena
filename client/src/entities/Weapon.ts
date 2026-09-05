@@ -55,16 +55,17 @@ export class Weapon {
   /**
    * Dispara desde (x, y) hacia `angle` (radianes).
    * `targets`: entidades dañables a comprobar (enemigos/dummies).
+   * `shooter`: quien dispara (se registra como killer en PLAYER_DIED).
    */
-  fire(x: number, y: number, angle: number, targets: Damageable[], now: number): void {
+  fire(x: number, y: number, angle: number, targets: Damageable[], now: number, shooter: Damageable | null = null): void {
     if (!this.canFire(now)) return;
     this.lastFireAt = now;
 
     const doShot = (): void => {
       if (this.config.hitscan) {
-        this.fireHitscan(x, y, angle, targets);
+        this.fireHitscan(x, y, angle, targets, shooter);
       } else {
-        this.fireProjectile(x, y, angle, targets);
+        this.fireProjectile(x, y, angle, targets, shooter);
       }
       playWeaponShot(this.scene, this.config.id);
     };
@@ -82,7 +83,7 @@ export class Weapon {
   // Disparo hitscan (rayo instantáneo)
   // ============================================================
 
-  private fireHitscan(x: number, y: number, angle: number, targets: Damageable[]): void {
+  private fireHitscan(x: number, y: number, angle: number, targets: Damageable[], shooter: Damageable | null): void {
     const { range, damage, tracer, spread, pellets } = this.config;
     const shots = pellets ?? 1;
 
@@ -106,7 +107,7 @@ export class Weapon {
       // Impacto: primer target cuyo círculo intersecta el segmento
       const hit = this.firstHitOnSegment(x, y, endX, endY, targets);
       if (hit) {
-        const real = applyDamage(hit, damage);
+        const real = applyDamage(hit, damage, shooter);
         addPowerCharge(hit, real); // daño hecho carga la Super
         this.spawnHitSpark(hit.gameObject.x, hit.gameObject.y, tracer);
       }
@@ -117,7 +118,7 @@ export class Weapon {
   // Disparo con proyectil
   // ============================================================
 
-  private fireProjectile(x: number, y: number, angle: number, targets: Damageable[]): void {
+  private fireProjectile(x: number, y: number, angle: number, targets: Damageable[], shooter: Damageable | null): void {
     const { projectileSpeed, range, damage, tracer, pellets, spread, explosionRadius } = this.config;
     const shots = pellets ?? 1;
 
@@ -136,7 +137,7 @@ export class Weapon {
         if (exploded) return;
         exploded = true;
         if (explosionRadius) {
-          this.explode(proj.x, proj.y, explosionRadius, damage, targets);
+          this.explode(proj.x, proj.y, explosionRadius, damage, targets, shooter);
         }
         proj.destroy();
       };
@@ -153,11 +154,11 @@ export class Weapon {
           if (exploded) return;
           exploded = true;
           if (explosionRadius) {
-            this.explode(proj.x, proj.y, explosionRadius, damage, targets);
+            this.explode(proj.x, proj.y, explosionRadius, damage, targets, shooter);
           } else {
             const hit = this.nearestTarget(proj.x, proj.y, targets);
             if (hit) {
-              const real = applyDamage(hit, damage);
+              const real = applyDamage(hit, damage, shooter);
               addPowerCharge(hit, real);
               this.spawnHitSpark(hit.gameObject.x, hit.gameObject.y, tracer);
             }
@@ -173,14 +174,14 @@ export class Weapon {
   // ============================================================
 
   /** Explosión en área (lanzagranadas w5). */
-  private explode(x: number, y: number, radius: number, damage: number, targets: Damageable[]): void {
+  private explode(x: number, y: number, radius: number, damage: number, targets: Damageable[], shooter: Damageable | null): void {
     playWeaponExplosion(this.scene);
     this.scene.add.circle(x, y, radius, Phaser.Display.Color.HexStringToColor('#f87171').color, 0.35).setDepth(4);
     for (const t of targets) {
       if (!t.alive) continue;
       const d = Phaser.Math.Distance.Between(x, y, t.gameObject.x, t.gameObject.y);
       if (d <= radius) {
-        const real = applyDamage(t, damage);
+        const real = applyDamage(t, damage, shooter);
         addPowerCharge(t, real);
       }
     }

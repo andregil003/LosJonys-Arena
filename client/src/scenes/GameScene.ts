@@ -541,10 +541,7 @@ this.countdownText?.destroy();
     });
   }
 
-  /** Payload de PLAYER_DIED: formato viejo (target directo) o nuevo (con killer). */
-type DiedPayload = Damageable | { target: Damageable; killer?: Damageable | null };
-
-  private onPlayerDied(payload: DiedPayload): void {
+private onPlayerDied(payload: DiedPayload): void {
     const target = 'target' in payload ? payload.target : payload;
     const killer = 'target' in payload ? (payload.killer ?? null) : null;
 
@@ -622,3 +619,6 @@ type DiedPayload = Damageable | { target: Damageable; killer?: Damageable | null
     }
   }
 }
+
+/** Payload de PLAYER_DIED: formato viejo (target directo) o nuevo (con killer). */
+type DiedPayload = Damageable | { target: Damageable; killer?: Damageable | null };

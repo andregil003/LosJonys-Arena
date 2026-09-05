@@ -153,7 +153,7 @@ update(time: number, targets: Damageable[]): void {
       if (this.activeSlot === 3) {
         this.tryKnife(time, targets);
       } else {
-        this.activeWeapon?.fire(this.x, this.y, angle, targets, time, this.walls);
+this.activeWeapon?.fire(this.x, this.y, angle, targets, time, this.walls, this);
         // Recarga automática cuando el cargador se vacía
         if (this.activeWeapon?.isEmpty && !this.activeWeapon.isReloading) {
           this.activeWeapon.reload();

@@ -26,8 +26,7 @@ export const Player = schema(
     powerCharge: t.number().default(0),
     alive: t.boolean().default(true),
     kills: t.number().default(0),
-    // Equipo: 0 = aliados (COOP), 1 = enemigos (COOP), o id único por jugador (FFA).
-    // Lo asigna ArenaRoom según el modo (Shrek).
+    /** Equipo: COOP todos 0; FFA cada jugador un índice único (0..5) */
     team: t.number().default(0),
   },
   'Player',

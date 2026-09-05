@@ -107,7 +107,7 @@ export class NPC implements Damageable {
       this.body.setVelocity(0, 0);
     }
 
-    // Disparo: apuntar al objetivo con miss rate — fallan más lejos y
+// Disparo: apuntar al objetivo con miss rate — fallan más lejos y
     // mucho más si el objetivo se está moviendo
     const baseAngle = Phaser.Math.Angle.Between(this.gameObject.x, this.gameObject.y, tx, ty);
     let inaccuracy = GAME_CONSTANTS.BOT_MISS_RATE_BASE;
@@ -118,7 +118,7 @@ export class NPC implements Damageable {
       inaccuracy += targetSpeed * GAME_CONSTANTS.BOT_MISS_RATE_PER_SPEED;
     }
     const fireAngle = baseAngle + Phaser.Math.FloatBetween(-inaccuracy, inaccuracy);
-    this.weapon.fire(this.gameObject.x, this.gameObject.y, fireAngle, targets, now, this.walls);
+    this.weapon.fire(this.gameObject.x, this.gameObject.y, fireAngle, targets, now, this.walls, this);
     // Recarga automática cuando el cargador se vacía
     if (this.weapon.isEmpty && !this.weapon.isReloading) {
       this.weapon.reload();

@@ -152,7 +152,7 @@ export class ArenaRoom extends Room<{ state: ArenaState }> {
     });
   }
 
-  onJoin(client: Client, options: { name?: string; color?: string; weapon1?: string; weapon2?: string; power?: string }): void {
+  onJoin(client: Client, options: { name?: string; color?: string; weapon1?: string; weapon2?: string; power?: string; mode?: string }): void {
     const player = new Player();
     player.id = client.sessionId;
     player.name = options?.name ?? 'Jony';
@@ -162,6 +162,13 @@ export class ArenaRoom extends Room<{ state: ArenaState }> {
     player.power = options?.power ?? 'p1';
     player.x = 100 + Math.random() * 1000;
     player.y = 100 + Math.random() * 500;
+
+    // Modo (el cliente lo manda en joinOrCreate; fallback al del room)
+    this.state.mode = options?.mode ?? this.state.mode;
+
+    // Equipos: COOP — todos los humanos al team 0; FFA — cada uno su índice único.
+    // En FFA el índice se asigna ANTES de insertar (players.size = 0..5).
+    player.team = this.state.mode === 'coop' ? 0 : this.state.players.size;
 
     this.state.players.set(client.sessionId, player);
     this.timers.set(client.sessionId, {

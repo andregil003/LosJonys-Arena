@@ -20,8 +20,7 @@ export type BackgroundKind =
   | 'data-rain'
   | 'cyberpunk-conway'
   | 'circuit-traces'
-  | 'gray-scott'
-  | 'synthwave-grid';
+  | 'gray-scott';
 
 /** Fondo FIJO de carga y del inicio. */
 export const LOADING_BACKGROUND: BackgroundKind = 'data-rain';
@@ -31,7 +30,6 @@ export const ARENA_BACKGROUNDS: BackgroundKind[] = [
   'cyberpunk-conway',
   'circuit-traces',
   'gray-scott',
-  'synthwave-grid',
 ];
 
 /** Tiempo de rotación de fondo en la arena (ms). */
@@ -564,180 +562,6 @@ class GrayScottEffect implements BgEffect {
 }
 
 // ============================================================
-// 5) SYNTHWAVE GRID — retícula 3D con sol de bandas
-// ============================================================
-
-const NEON_A: [number, number, number] = [34, 211, 238];
-const NEON_B: [number, number, number] = [255, 45, 149];
-
-class SynthwaveGridEffect implements BgEffect {
-  readonly key: BackgroundKind = 'synthwave-grid';
-  private VX = 0;
-  private VY = 0;
-  private D_PERSP = 0;
-  private stars: { x: number; y: number; size: number; a: number }[] = [];
-  private hLines: { z: number; rgb: [number, number, number] }[] = [];
-  private readonly MAX_Z = 46;
-  private readonly Z_SPEED = 9;
-  private readonly NUM_H_LINES = 24;
-  private readonly NUM_V_LINES = 20;
-  private W = 0;
-  private H = 0;
-
-  init(w: number, h: number): void {
-    this.W = w;
-    this.H = h;
-    this.VX = w / 2;
-    this.VY = h * 0.56;
-    this.D_PERSP = (h - this.VY) * 0.16;
-    // estrellas
-    this.stars = [];
-    const n = Math.round((w * this.VY) / 9000);
-    for (let i = 0; i < n; i++) {
-      this.stars.push({
-        x: Math.random() * w,
-        y: Math.random() * this.VY * 0.9,
-        size: Math.random() < 0.85 ? 1 : 2,
-        a: 0.3 + Math.random() * 0.6,
-      });
-    }
-    // líneas horizontales repartidas en profundidad
-    this.hLines = [];
-    for (let i = 0; i < this.NUM_H_LINES; i++) {
-      this.hLines.push({
-        z: this.MAX_Z * (i / this.NUM_H_LINES),
-        rgb: i % 2 === 0 ? NEON_A : NEON_B,
-      });
-    }
-  }
-
-  private screenYFromZ(z: number): number {
-    return this.VY + (this.H - this.VY) * (this.D_PERSP / (z + this.D_PERSP));
-  }
-
-  private drawSky(ctx: CanvasRenderingContext2D): void {
-    const grad = ctx.createLinearGradient(0, 0, 0, this.VY);
-    grad.addColorStop(0, '#0a0518');
-    grad.addColorStop(0.7, '#170a2e');
-    grad.addColorStop(1, '#2a0f3d');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, this.W, this.VY);
-
-    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    for (const s of this.stars) {
-      ctx.globalAlpha = s.a;
-      ctx.fillRect(s.x, s.y, s.size, s.size);
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  private drawSun(ctx: CanvasRenderingContext2D): void {
-    const R = Math.min(this.W, this.H) * 0.16;
-    const cx = this.VX;
-    const cy = this.VY;
-    const grad = ctx.createLinearGradient(0, cy - R, 0, cy + R * 0.3);
-    grad.addColorStop(0, '#ffe66d');
-    grad.addColorStop(0.35, '#ff9a5a');
-    grad.addColorStop(0.65, '#ff4d8d');
-    grad.addColorStop(1, '#b83bd6');
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(cx, cy, R, 0, Math.PI * 2);
-    ctx.clip();
-    ctx.fillStyle = grad;
-    ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
-
-    ctx.fillStyle = '#170a2e';
-    let bandY = cy - R * 0.05;
-    let bandH = 3;
-    let gap = 4;
-    for (let i = 0; i < 7; i++) {
-      ctx.fillRect(cx - R, bandY, R * 2, bandH);
-      bandY += bandH + gap;
-      bandH += 1.6;
-      gap += 1.4;
-      if (bandY > cy + R) break;
-    }
-    ctx.restore();
-
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    const glow = ctx.createRadialGradient(cx, cy, R * 0.6, cx, cy, R * 1.8);
-    glow.addColorStop(0, 'rgba(255,120,180,0.35)');
-    glow.addColorStop(1, 'rgba(255,120,180,0)');
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(cx, cy, R * 1.8, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  private drawHorizonGlow(ctx: CanvasRenderingContext2D): void {
-    const grad = ctx.createLinearGradient(0, this.VY - 18, 0, this.VY + 40);
-    grad.addColorStop(0, 'rgba(255,80,160,0)');
-    grad.addColorStop(0.5, 'rgba(255,80,160,0.5)');
-    grad.addColorStop(1, 'rgba(255,80,160,0)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, this.VY - 18, this.W, 58);
-  }
-
-  private drawGroundBase(ctx: CanvasRenderingContext2D): void {
-    ctx.fillStyle = '#0c0716';
-    ctx.fillRect(0, this.VY, this.W, this.H - this.VY);
-  }
-
-  private drawVerticalLines(ctx: CanvasRenderingContext2D): void {
-    const FAN_HALF = this.W / 2 * 1.2;
-    ctx.lineWidth = 1.4;
-    for (let i = -this.NUM_V_LINES / 2; i <= this.NUM_V_LINES / 2; i++) {
-      const t = i / (this.NUM_V_LINES / 2);
-      const bottomX = this.VX + t * FAN_HALF;
-      const rgb = i % 2 === 0 ? NEON_A : NEON_B;
-      ctx.strokeStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.35)`;
-      ctx.beginPath();
-      ctx.moveTo(this.VX, this.VY);
-      ctx.lineTo(bottomX, this.H);
-      ctx.stroke();
-    }
-  }
-
-  private renderStatic(ctx: CanvasRenderingContext2D): void {
-    ctx.clearRect(0, 0, this.W, this.H);
-    this.drawSky(ctx);
-    this.drawGroundBase(ctx);
-    this.drawSun(ctx);
-    this.drawVerticalLines(ctx);
-    this.drawHorizonGlow(ctx);
-  }
-
-  private drawHLine(ctx: CanvasRenderingContext2D, hl: { z: number; rgb: [number, number, number] }): void {
-    const proximity = 1 - hl.z / this.MAX_Z;
-    const y = this.screenYFromZ(hl.z);
-    const alpha = 0.14 + proximity * 0.6;
-    const width = 1 + proximity * 3.4;
-    const [r, g, b] = hl.rgb;
-    ctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
-    ctx.lineWidth = width;
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(this.W, y);
-    ctx.stroke();
-  }
-
-  draw(ctx: CanvasRenderingContext2D, w: number, h: number, dt: number): void {
-    this.renderStatic(ctx);
-    for (const hl of this.hLines) {
-      hl.z -= this.Z_SPEED * dt;
-      if (hl.z <= 0) hl.z += this.MAX_Z;
-      this.drawHLine(ctx, hl);
-    }
-    void w;
-    void h;
-  }
-}
-
-// ============================================================
 // Sistema de fondos (singleton)
 // ============================================================
 
@@ -746,7 +570,6 @@ const EFFECTS: Record<BackgroundKind, () => BgEffect> = {
   'cyberpunk-conway': () => new CyberpunkConwayEffect(),
   'circuit-traces': () => new CircuitTracesEffect(),
   'gray-scott': () => new GrayScottEffect(),
-  'synthwave-grid': () => new SynthwaveGridEffect(),
 };
 
 class BackgroundSystemImpl {

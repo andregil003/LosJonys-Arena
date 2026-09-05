@@ -1,34 +1,47 @@
 /**
- * state.ts — Estado autoritativo del servidor (Colyseus Schema).
+ * state.ts — Estado autoritativo del servidor (Colyseus 0.18 / Schema v5).
  *
  * PUCK: estructura base del estado.
  * Shrek: extiende con lógica de gameplay (armas, poderes, enemigos, rondas).
+ *
+ * NOTA: Schema v5 usa el builder `schema({...}, "Name")` — sin decorators.
+ * Los defaults se definen con `.default(valor)`.
  */
 
-import { Schema, type, MapSchema } from '@colyseus/schema';
+import { schema, t } from '@colyseus/schema';
 
-export class Player extends Schema {
-  @type('string') id: string = '';
-  @type('string') name: string = '';
-  @type('string') color: string = '#3A86FF';
-  @type('string') weapon1: string = 'w1';
-  @type('string') weapon2: string = 'w2';
-  @type('string') power: string = 'p1';
-  @type('number') x: number = 0;
-  @type('number') y: number = 0;
-  @type('number') hp: number = 100;
-  @type('number') maxHp: number = 100;
-  @type('number') activeSlot: number = 1;
-  @type('number') powerCharge: number = 0;
-  @type('boolean') alive: boolean = true;
-  @type('number') kills: number = 0;
-}
+export const Player = schema(
+  {
+    id: t.string().default(''),
+    name: t.string().default('Jony'),
+    color: t.string().default('#3A86FF'),
+    weapon1: t.string().default('w1'),
+    weapon2: t.string().default('w2'),
+    power: t.string().default('p1'),
+    x: t.number().default(0),
+    y: t.number().default(0),
+    hp: t.number().default(100),
+    maxHp: t.number().default(100),
+    activeSlot: t.number().default(1),
+    powerCharge: t.number().default(0),
+    alive: t.boolean().default(true),
+    kills: t.number().default(0),
+  },
+  'Player',
+);
 
-export class ArenaState extends Schema {
-  @type({ map: Player }) players = new MapSchema<Player>();
-  @type('string') status: string = 'lobby'; // lobby | agent-select | playing | ended
-  @type('string') mode: string = 'ffa'; // coop | ffa
-  @type('number') timeLeft: number = 0;
-  @type('number') round: number = 1;
-  @type('number') maxPlayers: number = 6;
-}
+export const ArenaState = schema(
+  {
+    players: t.map(Player),
+    status: t.string().default('lobby'), // lobby | agent-select | playing | ended
+    mode: t.string().default('ffa'), // coop | ffa
+    timeLeft: t.number().default(0),
+    round: t.number().default(1),
+    maxPlayers: t.number().default(6),
+  },
+  'ArenaState',
+);
+
+// Tipo de instancia para tipar Room<ArenaState> (schema v5 devuelve un valor)
+export type ArenaState = InstanceType<typeof ArenaState>;
+export type PlayerState = InstanceType<typeof Player>;

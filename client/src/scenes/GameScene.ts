@@ -97,7 +97,8 @@ export class GameScene extends Phaser.Scene {
     bullet.setActive(true).setVisible(true);
     bullet.setPosition(this.player.x, this.player.y);
     bullet.setSize(8, 8);
-    this.physics.velocityFromRotation(angle, 500, bullet.body as Phaser.Physics.Arcade.Body);
+    const body = bullet.body as Phaser.Physics.Arcade.Body;
+    body.setVelocity(Math.cos(angle) * 500, Math.sin(angle) * 500);
 
     // Limpiar balas fuera de pantalla
     this.time.delayedCall(2000, () => {

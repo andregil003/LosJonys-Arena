@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circuit Traces BG</title>
+<style>
+  :root{
+    --bg:#0a0e0e;
+    --trace-core:#eafffb;
+    --trace-glow-a: 34,211,238;   /* cian */
+    --trace-glow-b: 255,45,149;   /* magenta */
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{
+    background:var(--bg);
+    height:100vh;
+    overflow:hidden;
+  }
+  #bg-static, #bg-fx{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    z-index:0;
+    pointer-events:none;
+  }
+  #bg-fx{ z-index:1; }
+  .bg-veil{
+    position:fixed;
+    inset:0;
+    z-index:2;
+    pointer-events:none;
+    background: radial-gradient(circle at 50% 50%, rgba(10,14,14,0) 0%, rgba(10,14,14,.45) 100%);
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg-static"></canvas>
+<canvas id="bg-fx"></canvas>
+<div class="bg-veil"></div>
+
+<script>
+(function(){
+  const staticCanvas = document.getElementById('bg-static');
+  const fxCanvas = document.getElementById('bg-fx');
+  const sctx = staticCanvas.getContext('2d');
+  const fctx = fxCanvas.getContext('2d');
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const DIRS8 = [[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]];
+  const TURN_OPTS = [0, 1, -1, 2, -2];
+  const TURN_WEIGHTS = [0.45, 0.20, 0.20, 0.075, 0.075];
+
+  let dpr = Math.min(window.devicePixelRatio || 1, 2);
+  let W = 0, H = 0;
+  let traces = [];   // each: {points:[{x,y}], cum:[len...], total, color:[r,g,b]}
+  let pulses = [];
+
+  function weightedPick(opts, weights){
+    let r = Math.random();
+    for(let i=0;i<opts.length;i++){
+      if(r < weights[i]) return opts[i];
+      r -= weights[i];
+    }
+    return opts[0];
+  }
+
+  function generateTraces(){
+    const cellSize = Math.max(22, Math.min(36, Math.floor(W/40)));
+    const cols = Math.ceil(W/cellSize);
+    const rows = Math.ceil(H/cellSize);
+    const density = (W*H) / (900*600);
+    const numTraces = Math.round(10 + density*10);
+    const result = [];
+
+    for(let t=0; t<numTraces; t++){
+      let gx = Math.floor(Math.random()*cols);
+      let gy = Math.floor(Math.random()*rows);
+      let dirIdx = Math.floor(Math.random()*8);
+      const pts = [{x:gx*cellSize, y:gy*cellSize}];
+      const segCount = 7 + Math.floor(Math.random()*10);
+
+      for(let s=0; s<segCount; s++){
+        const turn = weightedPick(TURN_OPTS, TURN_WEIGHTS);
+        dirIdx = ((dirIdx + turn) % 8 + 8) % 8;
+        const [dx,dy] = DIRS8[dirIdx];
+        const segLen = 1 + Math.floor(Math.random()*4);
+        gx += dx*segLen;
+        gy += dy*segLen;
+        if(gx < 0 || gx > cols || gy < 0 || gy > rows) break;
+        pts.push({x:gx*cellSize, y:gy*cellSize});
+      }
+
+      if(pts.length < 2) continue;
+
+      const cum = [0];
+      for(let i=1;i<pts.length;i++){
+        const dx = pts[i].x - pts[i-1].x, dy = pts[i].y - pts[i-1].y;
+        cum.push(cum[i-1] + Math.sqrt(dx*dx+dy*dy));
+      }
+
+      const useMagenta = Math.random() < 0.22;
+      result.push({
+        points: pts,
+        cum: cum,
+        total: cum[cum.length-1],
+        rgb: useMagenta ? [255,45,149] : [34,211,238]
+      });
+    }
+    return result;
+  }
+
+  function drawStatic(){
+    sctx.clearRect(0,0,W,H);
+    sctx.lineJoin = 'round';
+    sctx.lineCap = 'round';
+
+    for(const tr of traces){
+      const [r,g,b] = tr.rgb;
+
+      // halo exterior
+      sctx.beginPath();
+      tr.points.forEach((p,i)=> i===0 ? sctx.moveTo(p.x,p.y) : sctx.lineTo(p.x,p.y));
+      sctx.strokeStyle = `rgba(${r},${g},${b},0.10)`;
+      sctx.lineWidth = 6;
+      sctx.shadowColor = `rgba(${r},${g},${b},0.6)`;
+      sctx.shadowBlur = 12;
+      sctx.stroke();
+
+      // linea base
+      sctx.beginPath();
+      tr.points.forEach((p,i)=> i===0 ? sctx.moveTo(p.x,p.y) : sctx.lineTo(p.x,p.y));
+      sctx.strokeStyle = `rgba(${r},${g},${b},0.35)`;
+      sctx.lineWidth = 1.6;
+      sctx.shadowBlur = 0;
+      sctx.stroke();
+
+      // pads en nodos
+      for(let i=0;i<tr.points.length;i++){
+        const p = tr.points[i];
+        const isEnd = (i===0 || i===tr.points.length-1);
+        sctx.beginPath();
+        sctx.arc(p.x, p.y, isEnd ? 3.2 : 2, 0, Math.PI*2);
+        sctx.fillStyle = `rgba(${r},${g},${b},${isEnd ? 0.55 : 0.3})`;
+        sctx.fill();
+      }
+    }
+  }
+
+  function spawnPulse(delay){
+    if(traces.length === 0) return;
+    const traceIndex = Math.floor(Math.random()*traces.length);
+    pulses.push({
+      traceIndex,
+      t: 0,
+      speed: 0.09 + Math.random()*0.14, // fraccion del trazo por segundo
+      delay: delay || 0,
+      trail: []
+    });
+  }
+
+  function pointAtT(tr, t){
+    const target = Math.max(0, Math.min(1,t)) * tr.total;
+    const cum = tr.cum, pts = tr.points;
+    for(let i=1;i<cum.length;i++){
+      if(target <= cum[i] || i === cum.length-1){
+        const segStart = cum[i-1], segEnd = cum[i];
+        const localT = segEnd > segStart ? (target-segStart)/(segEnd-segStart) : 0;
+        const p0 = pts[i-1], p1 = pts[i];
+        return { x: p0.x + (p1.x-p0.x)*localT, y: p0.y + (p1.y-p0.y)*localT };
+      }
+    }
+    return pts[pts.length-1];
+  }
+
+  let lastTime = performance.now();
+
+  function updatePulses(dt){
+    for(const pu of pulses){
+      if(pu.delay > 0){ pu.delay -= dt; continue; }
+      pu.t += pu.speed*dt;
+      const tr = traces[pu.traceIndex];
+      const pos = pointAtT(tr, pu.t);
+      pu.trail.unshift(pos);
+      if(pu.trail.length > 14) pu.trail.pop();
+      if(pu.t >= 1){
+        pu.t = 0;
+        pu.trail = [];
+        pu.delay = 0.4 + Math.random()*2.5;
+        pu.traceIndex = Math.floor(Math.random()*traces.length);
+      }
+    }
+  }
+
+  function drawPulses(){
+    fctx.clearRect(0,0,W,H);
+    for(const pu of pulses){
+      if(pu.delay > 0) continue;
+      const tr = traces[pu.traceIndex];
+      const [r,g,b] = tr.rgb;
+
+      for(let i=pu.trail.length-1; i>=0; i--){
+        const p = pu.trail[i];
+        const alpha = (1 - i/pu.trail.length) * 0.8;
+        const rad = 3.2 * (1 - i/pu.trail.length*0.6);
+        fctx.beginPath();
+        fctx.arc(p.x, p.y, rad, 0, Math.PI*2);
+        fctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+        fctx.shadowColor = `rgba(${r},${g},${b},0.9)`;
+        fctx.shadowBlur = 10;
+        fctx.fill();
+      }
+
+      if(pu.trail.length){
+        const head = pu.trail[0];
+        fctx.beginPath();
+        fctx.arc(head.x, head.y, 2.4, 0, Math.PI*2);
+        fctx.fillStyle = `rgba(255,255,255,0.95)`;
+        fctx.shadowColor = `rgba(${r},${g},${b},1)`;
+        fctx.shadowBlur = 14;
+        fctx.fill();
+      }
+    }
+    fctx.shadowBlur = 0;
+  }
+
+  function rebuild(){
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+
+    [staticCanvas, fxCanvas].forEach(c=>{
+      c.width = W*dpr;
+      c.height = H*dpr;
+      c.style.width = W+'px';
+      c.style.height = H+'px';
+    });
+    sctx.setTransform(dpr,0,0,dpr,0,0);
+    fctx.setTransform(dpr,0,0,dpr,0,0);
+
+    traces = generateTraces();
+    drawStatic();
+
+    pulses = [];
+    const numPulses = Math.min(18, Math.round(traces.length*0.6));
+    for(let i=0;i<numPulses;i++) spawnPulse(Math.random()*3);
+  }
+
+  window.addEventListener('resize', rebuild);
+  rebuild();
+
+  if(reduced){
+    // Fondo estatico, sin animacion de pulsos
+    return;
+  }
+
+  function loop(now){
+    const dt = Math.min(0.05, (now-lastTime)/1000);
+    lastTime = now;
+    updatePulses(dt);
+    drawPulses();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

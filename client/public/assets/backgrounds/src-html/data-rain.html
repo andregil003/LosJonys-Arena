@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Rain</title>
+<style>
+  :root{
+    --bg:#080b0a;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{
+    background:var(--bg);
+    height:100vh;
+    overflow:hidden;
+  }
+  #bg-canvas{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    z-index:0;
+    pointer-events:none;
+  }
+  .bg-veil{
+    position:fixed;
+    inset:0;
+    z-index:1;
+    pointer-events:none;
+    background: radial-gradient(circle at 50% 50%, rgba(8,11,10,0) 0%, rgba(8,11,10,.4) 100%);
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="bg-veil"></div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // set de caracteres: katakana + hex + binario
+  const KATAKANA = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+  const HEX = '0123456789ABCDEF';
+  const BIN = '01';
+  const CHARS = (KATAKANA + HEX + HEX + BIN + BIN + BIN).split('');
+
+  const FONT_SIZE = 16;
+  const COLOR_MAIN = [90, 255, 200];   // verde-cian (base cyberpunk)
+  const COLOR_HEAD = [220, 255, 245];  // casi blanco para la cabeza de cada columna
+
+  let dpr = Math.min(window.devicePixelRatio || 1, 2);
+  let W = 0, H = 0, cols = 0;
+  let drops = [];       // posicion y (en filas) de la "cabeza" de cada columna
+  let speeds = [];      // velocidad (filas por frame) de cada columna
+  let nextChar = [];    // caracter actual random por columna (se regenera al pasar)
+  let lastSwap = [];    // contador para cambiar de caracter ocasionalmente
+
+  function randChar(){
+    return CHARS[Math.floor(Math.random()*CHARS.length)];
+  }
+
+  function setup(){
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W*dpr;
+    canvas.height = H*dpr;
+    canvas.style.width = W+'px';
+    canvas.style.height = H+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.font = FONT_SIZE + 'px monospace';
+    ctx.textBaseline = 'top';
+
+    cols = Math.ceil(W / FONT_SIZE);
+    drops = new Array(cols);
+    speeds = new Array(cols);
+    nextChar = new Array(cols);
+    lastSwap = new Array(cols);
+
+    for(let i=0;i<cols;i++){
+      drops[i] = Math.random() * (H/FONT_SIZE) * -1; // arrancan arriba de la pantalla, escalonadas
+      speeds[i] = 0.25 + Math.random()*0.9;          // filas por frame, distinta por columna
+      nextChar[i] = randChar();
+      lastSwap[i] = Math.floor(Math.random()*20);
+    }
+
+    // fondo solido inicial (para que no se vea transparente antes del primer fade)
+    ctx.fillStyle = '#080b0a';
+    ctx.fillRect(0,0,W,H);
+  }
+
+  function frame(){
+    // velo semitransparente sobre todo el canvas -> genera el fade trail
+    ctx.fillStyle = 'rgba(8,11,10,0.13)';
+    ctx.fillRect(0,0,W,H);
+
+    for(let i=0;i<cols;i++){
+      const x = i*FONT_SIZE;
+      const y = drops[i]*FONT_SIZE;
+
+      // cabeza: caracter mas brillante
+      if(y >= -FONT_SIZE && y < H){
+        ctx.fillStyle = `rgba(${COLOR_HEAD[0]},${COLOR_HEAD[1]},${COLOR_HEAD[2]},0.95)`;
+        ctx.fillText(nextChar[i], x, y);
+      }
+
+      // un par de caracteres detras de la cabeza, mas tenues, dan cuerpo al trazo
+      for(let k=1;k<=3;k++){
+        const ty = y - k*FONT_SIZE;
+        if(ty < 0 || ty > H) continue;
+        const alpha = 0.5 - k*0.13;
+        if(alpha <= 0) continue;
+        ctx.fillStyle = `rgba(${COLOR_MAIN[0]},${COLOR_MAIN[1]},${COLOR_MAIN[2]},${alpha})`;
+        ctx.fillText(randChar(), x, ty);
+      }
+
+      drops[i] += speeds[i];
+
+      // cambia el caracter de la cabeza cada tanto para efecto "parpadeo de datos"
+      lastSwap[i]--;
+      if(lastSwap[i] <= 0){
+        nextChar[i] = randChar();
+        lastSwap[i] = 4 + Math.floor(Math.random()*14);
+      }
+
+      // al salir de pantalla, reinicia arriba con nueva velocidad
+      if(y > H + FONT_SIZE*4){
+        drops[i] = -(Math.random()*10);
+        speeds[i] = 0.25 + Math.random()*0.9;
+      }
+    }
+  }
+
+  window.addEventListener('resize', setup);
+  setup();
+
+  if(reduced){
+    // una pasada estatica y listo, sin animacion continua
+    for(let n=0;n<40;n++) frame();
+    return;
+  }
+
+  function loop(){
+    frame();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

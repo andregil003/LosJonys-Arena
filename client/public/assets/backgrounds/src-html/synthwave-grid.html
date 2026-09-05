@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Synthwave Grid</title>
+<style>
+  :root{
+    --bg-top:#0a0518;
+    --bg-horizon:#1a0b2e;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{
+    background:var(--bg-top);
+    height:100vh;
+    overflow:hidden;
+  }
+  #bg-static, #bg-fx{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    z-index:0;
+    pointer-events:none;
+  }
+  #bg-fx{ z-index:1; }
+  .bg-veil{
+    position:fixed;
+    inset:0;
+    z-index:2;
+    pointer-events:none;
+    background: radial-gradient(circle at 50% 40%, rgba(10,5,24,0) 0%, rgba(10,5,24,.5) 100%);
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg-static"></canvas>
+<canvas id="bg-fx"></canvas>
+<div class="bg-veil"></div>
+
+<script>
+(function(){
+  const staticCanvas = document.getElementById('bg-static');
+  const fxCanvas = document.getElementById('bg-fx');
+  const sctx = staticCanvas.getContext('2d');
+  const fctx = fxCanvas.getContext('2d');
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const NEON_A = [34,211,238];   // cian
+  const NEON_B = [255,45,149];   // magenta
+
+  let dpr = Math.min(window.devicePixelRatio || 1, 2);
+  let W = 0, H = 0, VX = 0, VY = 0;
+  let stars = [];
+  let hLines = [];    // lineas horizontales animadas (profundidad real, no easing artificial)
+  let D_PERSP = 0;    // constante de proyeccion (controla cuanto "abre" la perspectiva)
+  const NUM_H_LINES = 24;
+  const NUM_V_LINES = 20;
+  const MAX_Z = 46;     // profundidad maxima (mundo) a la que "nace" una linea
+  const Z_SPEED = 9;    // unidades de profundidad por segundo (velocidad constante real)
+
+  function drawSky(){
+    const grad = sctx.createLinearGradient(0,0,0,VY);
+    grad.addColorStop(0, '#0a0518');
+    grad.addColorStop(0.7, '#170a2e');
+    grad.addColorStop(1, '#2a0f3d');
+    sctx.fillStyle = grad;
+    sctx.fillRect(0,0,W,VY);
+
+    sctx.fillStyle = 'rgba(255,255,255,0.8)';
+    for(const s of stars){
+      sctx.globalAlpha = s.a;
+      sctx.fillRect(s.x, s.y, s.size, s.size);
+    }
+    sctx.globalAlpha = 1;
+  }
+
+  function drawSun(){
+    const R = Math.min(W,H) * 0.16;
+    const cx = VX, cy = VY;
+
+    const grad = sctx.createLinearGradient(0, cy-R, 0, cy+R*0.3);
+    grad.addColorStop(0, '#ffe66d');
+    grad.addColorStop(0.35, '#ff9a5a');
+    grad.addColorStop(0.65, '#ff4d8d');
+    grad.addColorStop(1, '#b83bd6');
+
+    sctx.save();
+    sctx.beginPath();
+    sctx.arc(cx, cy, R, 0, Math.PI*2);
+    sctx.clip();
+    sctx.fillStyle = grad;
+    sctx.fillRect(cx-R, cy-R, R*2, R*2);
+
+    const bands = 7;
+    sctx.fillStyle = '#170a2e';
+    let bandY = cy - R*0.05;
+    let bandH = 3;
+    let gap = 4;
+    for(let i=0;i<bands;i++){
+      sctx.fillRect(cx-R, bandY, R*2, bandH);
+      bandY += bandH + gap;
+      bandH += 1.6;
+      gap += 1.4;
+      if(bandY > cy+R) break;
+    }
+    sctx.restore();
+
+    sctx.save();
+    sctx.globalCompositeOperation = 'lighter';
+    const glow = sctx.createRadialGradient(cx,cy,R*0.6, cx,cy,R*1.8);
+    glow.addColorStop(0, 'rgba(255,120,180,0.35)');
+    glow.addColorStop(1, 'rgba(255,120,180,0)');
+    sctx.fillStyle = glow;
+    sctx.beginPath();
+    sctx.arc(cx,cy,R*1.8,0,Math.PI*2);
+    sctx.fill();
+    sctx.restore();
+  }
+
+  function drawHorizonGlow(){
+    const grad = sctx.createLinearGradient(0, VY-18, 0, VY+40);
+    grad.addColorStop(0, 'rgba(255,80,160,0)');
+    grad.addColorStop(0.5, 'rgba(255,80,160,0.5)');
+    grad.addColorStop(1, 'rgba(255,80,160,0)');
+    sctx.fillStyle = grad;
+    sctx.fillRect(0, VY-18, W, 58);
+  }
+
+  function drawGroundBase(){
+    sctx.fillStyle = '#0c0716';
+    sctx.fillRect(0, VY, W, H-VY);
+  }
+
+  // Abanico de lineas verticales: cubre TODO el ancho, de esquina a esquina abajo,
+  // no solo la franja central/frontal. FAN_HALF con margen extra para que las
+  // lineas mas extremas salgan un poco mas alla del borde y no dejen huecos.
+  function drawVerticalLines(){
+    const FAN_HALF = (W/2) * 1.2;
+    sctx.lineWidth = 1.4;
+    for(let i=-NUM_V_LINES/2; i<=NUM_V_LINES/2; i++){
+      const t = i / (NUM_V_LINES/2); // -1 .. 1
+      const bottomX = VX + t * FAN_HALF; // lineal: t=-1 -> borde izq (y mas alla), t=1 -> borde der (y mas alla)
+      const [r,g,b] = (i % 2 === 0) ? NEON_A : NEON_B;
+      sctx.strokeStyle = `rgba(${r},${g},${b},0.35)`;
+      sctx.beginPath();
+      sctx.moveTo(VX, VY);
+      sctx.lineTo(bottomX, H);
+      sctx.stroke();
+    }
+  }
+
+  // Proyeccion de perspectiva real: dado un "mundo z" (distancia a la camara),
+  // devuelve la coordenada Y en pantalla. z=0 -> pegado a la camara (abajo, H).
+  // z grande -> cerca del horizonte (VY). Esto reemplaza el easing artificial
+  // que hacia que las lineas recien nacidas casi no se movieran.
+  function screenYFromZ(z){
+    return VY + (H - VY) * (D_PERSP / (z + D_PERSP));
+  }
+
+  function initHLines(){
+    hLines = [];
+    for(let i=0;i<NUM_H_LINES;i++){
+      hLines.push({
+        z: MAX_Z * (i / NUM_H_LINES),   // distribucion inicial pareja en profundidad real
+        rgb: (i % 2 === 0) ? NEON_A : NEON_B  // color fijo por linea, no cambia mientras viaja
+      });
+    }
+  }
+
+  function drawHLine(hl){
+    const proximity = 1 - (hl.z / MAX_Z); // 0 = lejos (horizonte), 1 = cerca (camara)
+    const y = screenYFromZ(hl.z);
+    const alpha = 0.14 + proximity*0.6;
+    const width = 1 + proximity*3.4;
+    const [r,g,b] = hl.rgb;
+    fctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
+    fctx.lineWidth = width;
+    fctx.beginPath();
+    fctx.moveTo(0,y);
+    fctx.lineTo(W,y);
+    fctx.stroke();
+  }
+
+  function buildStars(){
+    stars = [];
+    const n = Math.round((W*VY)/9000);
+    for(let i=0;i<n;i++){
+      stars.push({
+        x: Math.random()*W,
+        y: Math.random()*VY*0.9,
+        size: Math.random()<0.85 ? 1 : 2,
+        a: 0.3 + Math.random()*0.6
+      });
+    }
+  }
+
+  function renderStatic(){
+    sctx.clearRect(0,0,W,H);
+    drawSky();
+    drawGroundBase();
+    drawSun();
+    drawVerticalLines();
+    drawHorizonGlow();
+  }
+
+  function setup(){
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    VX = W/2;
+    VY = H*0.56;
+    D_PERSP = (H-VY) * 0.16; // cuanto mas chico, mas "lejos" se ven las lineas de mayor z
+
+    [staticCanvas, fxCanvas].forEach(c=>{
+      c.width = W*dpr;
+      c.height = H*dpr;
+      c.style.width = W+'px';
+      c.style.height = H+'px';
+    });
+    sctx.setTransform(dpr,0,0,dpr,0,0);
+    fctx.setTransform(dpr,0,0,dpr,0,0);
+
+    buildStars();
+    renderStatic();
+    initHLines();
+
+    fctx.clearRect(0,0,W,H);
+    for(const hl of hLines) drawHLine(hl);
+  }
+
+  window.addEventListener('resize', setup);
+  setup();
+
+  if(reduced) return;
+
+  let lastTime = performance.now();
+
+  function loop(now){
+    const dt = Math.min(0.05, (now-lastTime)/1000);
+    lastTime = now;
+
+    fctx.clearRect(0,0,W,H);
+    for(const hl of hLines){
+      hl.z -= Z_SPEED*dt;
+      if(hl.z <= 0) hl.z += MAX_Z; // wrap suave, sin salto brusco
+      drawHLine(hl);
+    }
+
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

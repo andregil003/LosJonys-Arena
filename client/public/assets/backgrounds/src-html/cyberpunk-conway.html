@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fondo Cyberpunk — Autómata Celular</title>
+<style>
+  :root{
+    --bg:#0a0a10;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{
+    background:var(--bg);
+    height:100vh;
+    overflow:hidden;
+  }
+  #bg-canvas{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    z-index:0;
+    pointer-events:none;
+    image-rendering:pixelated;
+  }
+  .bg-veil{
+    position:fixed;
+    inset:0;
+    z-index:1;
+    pointer-events:none;
+    background: radial-gradient(circle at 50% 50%, rgba(10,10,16,0) 0%, rgba(10,10,16,.4) 100%);
+  }
+  .bg-scan{
+    position:fixed;
+    inset:0;
+    z-index:2;
+    pointer-events:none;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(0,0,0,0) 0px,
+      rgba(0,0,0,0) 2px,
+      rgba(0,0,0,.16) 3px
+    );
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="bg-veil"></div>
+<div class="bg-scan"></div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  // N = resolución de la grilla. Más bajo -> bloques más grandes y notorios.
+  const N = 88;
+  const off = document.createElement('canvas');
+  off.width = N; off.height = N;
+  const offCtx = off.getContext('2d');
+  offCtx.imageSmoothingEnabled = false;
+  const imgData = offCtx.createImageData(N, N);
+
+  // Estado del autómata: viva/muerta, más una "edad" que da el rastro neón al morir.
+  let cell = new Uint8Array(N*N);
+  let next = new Uint8Array(N*N);
+  let age  = new Float32Array(N*N);
+
+  function idx(x,y){ return y*N + x; }
+
+  // Patrones clásicos para arrancar con formas reconocibles en vez de solo ruido.
+  const GLIDER      = [[1,0],[2,1],[0,2],[1,2],[2,2]];
+  const R_PENTOMINO = [[1,0],[2,0],[0,1],[1,1],[1,2]];
+
+  function stamp(pattern, ox, oy){
+    for(const [dx,dy] of pattern){
+      const xi = ((ox+dx)%N+N)%N;
+      const yi = ((oy+dy)%N+N)%N;
+      cell[idx(xi,yi)] = 1;
+    }
+  }
+
+  function seed(){
+    cell.fill(0);
+    for(let i=0; i<N*N; i++){
+      cell[i] = Math.random() < 0.07 ? 1 : 0;
+    }
+    const patterns = 3 + Math.floor(Math.random()*4);
+    for(let p=0; p<patterns; p++){
+      const pattern = Math.random() < 0.5 ? GLIDER : R_PENTOMINO;
+      stamp(pattern, Math.floor(Math.random()*N), Math.floor(Math.random()*N));
+    }
+  }
+  seed();
+
+  let stableFrames = 0;
+  let prevPop = -1;
+
+  function step(){
+    let population = 0;
+    for(let y=0; y<N; y++){
+      const yN = (y-1+N)%N, yS = (y+1)%N;
+      for(let x=0; x<N; x++){
+        const xW = (x-1+N)%N, xE = (x+1)%N;
+        const i = idx(x,y);
+        const n =
+          cell[idx(xW,yN)] + cell[idx(x,yN)] + cell[idx(xE,yN)] +
+          cell[idx(xW,y )]                    + cell[idx(xE,y )] +
+          cell[idx(xW,yS)] + cell[idx(x,yS)] + cell[idx(xE,yS)];
+        const alive = cell[i] === 1;
+        const willLive = alive ? (n === 2 || n === 3) : (n === 3);
+        next[i] = willLive ? 1 : 0;
+        if(willLive){
+          population++;
+          age[i] = Math.min(1, age[i] + 0.55);
+        } else {
+          age[i] *= 0.90;
+        }
+      }
+    }
+    [cell, next] = [next, cell];
+
+    // Si el tablero se queda estático o casi muerto, resiembra solo.
+    if(population === prevPop) stableFrames++; else stableFrames = 0;
+    prevPop = population;
+    if(stableFrames > 40 || population < N*N*0.01){
+      seed();
+      stableFrames = 0;
+    }
+  }
+
+  function render(){
+    const data = imgData.data;
+    for(let i=0; i<N*N; i++){
+      const a = age[i];
+      const t = 1 - a; // 0 = núcleo recién vivo (cian), 1 = cola apagándose (magenta)
+      const p = i*4;
+      data[p]   = Math.round(34  + t*(255-34));
+      data[p+1] = Math.round(211*(1-t) + 20*t);
+      data[p+2] = 235;
+      data[p+3] = Math.round(a * 235);
+    }
+    offCtx.putImageData(imgData, 0, 0);
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.imageSmoothingEnabled = false;
+    ctx.globalAlpha = 0.6;
+    ctx.drawImage(off, 0, 0, N, N, 0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 1;
+  }
+
+  function resize(){
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // A diferencia de la reacción-difusión, Conway avanza por generaciones discretas:
+  // STEP_MS define qué tan rápido "tickea" el autómata (no en cada frame de render).
+  const STEP_MS = 90;
+  let acc = 0;
+  let last = performance.now();
+
+  function loop(now){
+    acc += now - last;
+    last = now;
+    while(acc >= STEP_MS){
+      step();
+      acc -= STEP_MS;
+    }
+    render();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

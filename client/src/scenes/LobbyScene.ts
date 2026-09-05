@@ -3,17 +3,25 @@ import { THEME, monoStyle, sansStyle, monoFaStyle } from '../ui/theme';
 import { ICONS, iconStyle, fa } from '../ui/icons';
 import { GAME_CONSTANTS } from '../types';
 import { loadJony } from '../data/catalog';
-import { network } from '../systems/network';
+import { network, type ServerGameState } from '../systems/network';
 import { BackgroundSystem } from '../systems/backgrounds';
 import { MusicSystem } from '../systems/music-system';
 import type { GameMode } from '../types';
+
+/** Referencias de una fila de jugador para poder actualizarla en vivo. */
+interface PlayerSlotRef {
+  colorCircle: Phaser.GameObjects.Arc;
+  userIcon: Phaser.GameObjects.Text;
+  nameText: Phaser.GameObjects.Text;
+  badge: Phaser.GameObjects.Text;
+  isLocal: boolean;
+}
 
 /**
  * LobbyScene — Sala de espera antes de la partida.
  *
  * - Countdown 2:00 (GAME_CONSTANTS.LOBBY_SECONDS).
- * - Lista de jugadores (placeholder): el Jony local (localStorage losjonys-jony)
- *   + slots vacíos hasta 6.
+ * - Lista de jugadores en vivo: el Jony local + los remotos del servidor (hasta 6).
  * - Botón LISTO (toggle verde/cian).
  * - Al llegar a 0:00 → COOP: AgentSelectScene / FFA: GameScene.
  *
@@ -35,6 +43,8 @@ export class LobbyScene extends Phaser.Scene {
   private readyBtn?: Phaser.GameObjects.Text;
   private readyBorder?: Phaser.GameObjects.Rectangle;
   private countdownEvent?: Phaser.Time.TimerEvent;
+  private playerSlots: PlayerSlotRef[] = [];
+  private playersTitle?: Phaser.GameObjects.Text;
 
   constructor() {
     super('LobbyScene');
@@ -136,7 +146,7 @@ export class LobbyScene extends Phaser.Scene {
       }))
       .setOrigin(0.5);
 
-    this.add
+    this.playersTitle = this.add
       .text(panelX - 108, panelY - panelH / 2 + 22, `JUGADORES  (1/${GAME_CONSTANTS.MAX_PLAYERS})`, monoStyle({
         fontSize: '12px',
         color: THEME.secondary,
@@ -147,11 +157,12 @@ export class LobbyScene extends Phaser.Scene {
     // Slot 0: Jony local (localStorage losjonys-jony)
     const localName = jony?.name?.trim() || 'Jony';
     const localColor = jony?.color ?? THEME.accent;
-    this.createPlayerSlot(panelX, panelY - panelH / 2 + 44, localName, localColor, true);
+    this.playerSlots = [];
+    this.playerSlots.push(this.createPlayerSlot(panelX, panelY - panelH / 2 + 44, localName, localColor, true));
 
-    // Slots 1..5: vacíos
+    // Slots 1..5: vacíos (se rellenan en vivo con los remotos)
     for (let i = 1; i < GAME_CONSTANTS.MAX_PLAYERS; i++) {
-      this.createPlayerSlot(panelX, panelY - panelH / 2 + 44 + i * 52, null, null, false);
+      this.playerSlots.push(this.createPlayerSlot(panelX, panelY - panelH / 2 + 44 + i * 52, null, null, false));
     }
 
     // ============================================================
@@ -212,8 +223,8 @@ export class LobbyScene extends Phaser.Scene {
   // Helpers de UI
   // ============================================================
 
-  /** Fila de jugador dentro del panel (ocupada o vacía) */
-  private createPlayerSlot(x: number, y: number, name: string | null, color: string | null, isLocal: boolean): void {
+  /** Fila de jugador dentro del panel (ocupada o vacía). Devuelve refs para actualizarla en vivo. */
+  private createPlayerSlot(x: number, y: number, name: string | null, color: string | null, isLocal: boolean): PlayerSlotRef {
     const rowW = 460;
     const rowH = 44;
 
@@ -222,47 +233,75 @@ export class LobbyScene extends Phaser.Scene {
       .rectangle(x, y, rowW, rowH, 0x000000, 0)
       .setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(borderHex).color);
 
-    if (name && color) {
-      // Círculo de color del Jony
-      this.add
-        .circle(x - rowW / 2 + 30, y, 12, Phaser.Display.Color.HexStringToColor(color).color)
-        .setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(THEME.text).color);
+    const hasPlayer = Boolean(name && color);
 
-      // Icono de usuario (FontAwesome)
-      this.add
-        .text(x - rowW / 2 + 52, y, ICONS.user, iconStyle({
-          fontSize: '13px',
-          color: THEME.secondary,
-        }))
-        .setOrigin(0.5);
+    // Círculo de color del Jony (oculto si el slot está vacío)
+    const colorCircle = this.add
+      .circle(x - rowW / 2 + 30, y, 12, Phaser.Display.Color.HexStringToColor(color ?? THEME.border).color)
+      .setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(THEME.text).color)
+      .setVisible(hasPlayer);
 
-      // Nombre
-      this.add
-        .text(x - rowW / 2 + 70, y, name, monoStyle({
-          fontSize: '16px',
-          color: THEME.text,
-        }))
-        .setOrigin(0, 0.5);
+    // Icono de usuario (FontAwesome)
+    const userIcon = this.add
+      .text(x - rowW / 2 + 52, y, ICONS.user, iconStyle({
+        fontSize: '13px',
+        color: THEME.secondary,
+      }))
+      .setOrigin(0.5)
+      .setVisible(hasPlayer);
 
-      // Badge TÚ
-      if (isLocal) {
-        this.add
-          .text(x + rowW / 2 - 24, y, 'TÚ', monoStyle({
-            fontSize: '11px',
-            color: THEME.bg,
-            backgroundColor: color,
-            padding: { x: 8, y: 3 },
-          }))
-          .setOrigin(0.5);
+    // Nombre (o "ESPERANDO..." si el slot está vacío)
+    const nameText = this.add
+      .text(x - rowW / 2 + 70, y, hasPlayer ? (name ?? 'Jony') : 'ESPERANDO...', monoStyle({
+        fontSize: '16px',
+        color: hasPlayer ? THEME.text : '#555555',
+      }))
+      .setOrigin(0, 0.5);
+
+    // Badge TÚ (solo el local)
+    const badge = this.add
+      .text(x + rowW / 2 - 24, y, 'TÚ', monoStyle({
+        fontSize: '11px',
+        color: THEME.bg,
+        backgroundColor: color ?? THEME.accent,
+        padding: { x: 8, y: 3 },
+      }))
+      .setOrigin(0.5)
+      .setVisible(isLocal && hasPlayer);
+
+    return { colorCircle, userIcon, nameText, badge, isLocal };
+  }
+
+  /** Rellena los slots 1..5 con los jugadores remotos del estado del servidor. */
+  private refreshPlayerList(state: ServerGameState | null): void {
+    const players = state?.players;
+    const total = players?.size ?? 1;
+    this.playersTitle?.setText(`JUGADORES  (${total}/${GAME_CONSTANTS.MAX_PLAYERS})`);
+
+    // Remotos = todos menos el propio sessionId
+    const remotes: { name: string; color: string }[] = [];
+    players?.forEach((p, id) => {
+      if (id !== network.sessionId) {
+        remotes.push({ name: p.name || 'Jony', color: p.color || THEME.accent });
       }
-    } else {
-      // Slot vacío
-      this.add
-        .text(x, y, 'ESPERANDO...', monoStyle({
-          fontSize: '14px',
-          color: '#555555',
-        }))
-        .setOrigin(0.5);
+    });
+
+    for (let i = 1; i < this.playerSlots.length; i++) {
+      const slot = this.playerSlots[i];
+      const remote = remotes[i - 1];
+      if (remote) {
+        slot.colorCircle
+          .setFillStyle(Phaser.Display.Color.HexStringToColor(remote.color).color)
+          .setVisible(true);
+        slot.userIcon.setVisible(true);
+        slot.nameText.setText(remote.name).setColor(THEME.text);
+        slot.badge.setVisible(false);
+      } else {
+        slot.colorCircle.setVisible(false);
+        slot.userIcon.setVisible(false);
+        slot.nameText.setText('ESPERANDO...').setColor('#555555');
+        slot.badge.setVisible(false);
+      }
     }
   }
 
@@ -427,11 +466,13 @@ export class LobbyScene extends Phaser.Scene {
       if (room?.state?.players) {
         this.remotePlayers = room.state.players.size - 1; // -1 = el propio
         if (this.remotePlayers < 0) this.remotePlayers = 0;
+        this.refreshPlayerList(room.state);
       }
       // Escuchar cambios de estado (entrada/salida de jugadores)
       room?.onStateChange((state) => {
         const size = state.players?.size ?? 1;
         this.remotePlayers = Math.max(0, size - 1);
+        this.refreshPlayerList(state);
       });
     } catch {
       // Sin servidor: asumimos solos (offline)

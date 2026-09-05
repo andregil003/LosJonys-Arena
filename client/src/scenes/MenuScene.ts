@@ -83,7 +83,7 @@ export class MenuScene extends Phaser.Scene {
       playBtn.setColor(THEME.text);
       btnBorder.setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(THEME.border).color);
     });
-    playBtn.on('pointerdown', () => this.scene.start('GameScene'));
+    playBtn.on('pointerdown', () => this.scene.start('CreateJonyScene'));
 
     // Versión (mono, discreto)
     this.add

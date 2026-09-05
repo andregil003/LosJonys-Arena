@@ -9,6 +9,7 @@ import { NPC } from '../entities/NPC';
 import type { Damageable } from '../systems/combat';
 import { WEAPONS } from '../systems/weapon-catalog';
 import { generateMap, type WallRect } from '../systems/map-gen';
+import { pickRandomArena, type Arena } from '../systems/arenas';
 
 /**
  * GameScene — Arena de juego.
@@ -56,6 +57,9 @@ export class GameScene extends Phaser.Scene {
   // Mapa procedural (paredes)
   private walls: Phaser.GameObjects.Rectangle[] = [];
 
+  // Arena elegida aleatoriamente (catálogo de Shrek)
+  private arena: Arena = pickRandomArena();
+
   // Countdown inicial (3-2-1-PELEA): nadie dispara ni recibe daño
   private countdownActive = true;
   private countdownText?: Phaser.GameObjects.Text;
@@ -85,8 +89,9 @@ export class GameScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const jony = loadJony();
 
-    // Fondo de la arena
-    this.add.rectangle(width / 2, height / 2, width, height, 0x2a2a3f);
+    // Fondo de la arena (aleatoria del catálogo — Shrek agrega más)
+    this.add.rectangle(width / 2, height / 2, width, height, this.arena.backgroundColor);
+    this.arena.decorate?.(this, width, height);
 
     // Mapa procedural: paredes aleatorias (no bloquean la zona de spawn)
     this.createWalls();
@@ -277,7 +282,7 @@ export class GameScene extends Phaser.Scene {
     this.walls = rects.map((r) => {
       const rect = this.add
         .rectangle(r.x + r.w / 2, r.y + r.h / 2, r.w, r.h, 0x1a1a2e)
-        .setStrokeStyle(2, Phaser.Display.Color.HexStringToColor('#3a3a5f').color);
+        .setStrokeStyle(2, Phaser.Display.Color.HexStringToColor(this.arena.accentColor).color);
       // Cuerpo estático para colisiones
       this.physics.add.existing(rect as unknown as Phaser.GameObjects.GameObject, true);
       return rect;

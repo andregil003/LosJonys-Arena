@@ -5,7 +5,8 @@
  * autoritativa del server. IDs del contrato: w1..w5 / p1..p5.
  * NO tocar state.ts (PUCK).
  *
- * Números portados del prototipo local (ya testeado en la arena 2D).
+ * Daño de armas +40% (v1.1, kill rate partida solitaria ~1-2 min):
+ *   w1 14→20 · w2 11→15 · w3 60→84 · w4 6→8 · w5 45→63
  */
 
 // ============ ARMAS (w1..w5) ============
@@ -30,31 +31,31 @@ export interface WeaponBalance {
 export const WEAPONS: Record<string, WeaponBalance> = {
   w1: {
     id: 'w1', name: 'Escopeta',
-    damage: 14, fireRateMs: 900, pellets: 8, spreadDeg: 34,
+    damage: 20, fireRateMs: 900, pellets: 8, spreadDeg: 34,
     pelletSpeed: 720, range: 300, windupMs: 0, explosive: false,
     explosionRadius: 0, auto: false,
   },
   w2: {
     id: 'w2', name: 'Rifle de asalto',
-    damage: 11, fireRateMs: 125, pellets: 1, spreadDeg: 6,
+    damage: 15, fireRateMs: 125, pellets: 1, spreadDeg: 6,
     pelletSpeed: 950, range: 560, windupMs: 0, explosive: false,
     explosionRadius: 0, auto: true,
   },
   w3: {
     id: 'w3', name: 'Sniper',
-    damage: 60, fireRateMs: 1500, pellets: 1, spreadDeg: 0,
+    damage: 84, fireRateMs: 1500, pellets: 1, spreadDeg: 0,
     pelletSpeed: 1500, range: 980, windupMs: 550, explosive: false,
     explosionRadius: 0, auto: false,
   },
   w4: {
     id: 'w4', name: 'SMG',
-    damage: 6, fireRateMs: 85, pellets: 1, spreadDeg: 15,
+    damage: 8, fireRateMs: 85, pellets: 1, spreadDeg: 15,
     pelletSpeed: 820, range: 380, windupMs: 0, explosive: false,
     explosionRadius: 0, auto: true,
   },
   w5: {
     id: 'w5', name: 'Lanzagranadas',
-    damage: 45, fireRateMs: 1100, pellets: 1, spreadDeg: 0,
+    damage: 63, fireRateMs: 1100, pellets: 1, spreadDeg: 0,
     pelletSpeed: 400, range: 640, windupMs: 0, explosive: true,
     explosionRadius: 95, auto: false,
   },

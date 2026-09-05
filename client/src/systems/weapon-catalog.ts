@@ -5,7 +5,8 @@
  * PUCK: los nombres/taglines/colores reales están aquí para alinear
  * data/catalog.ts de la UI (WEAPON_LIST[id].name, .tagline, .color).
  *
- * Balance v1 — ajustable con playtest.
+ * Balance v1.1 — daño +40% (kill rate partida solitaria ~1-2 min).
+ *   w1 12→17 · w2 13→18 · w3 75→105 · w4 7→10 · w5 110→154
  */
 
 import type { WeaponId, WeaponStats } from '../types';
@@ -34,7 +35,7 @@ export const WEAPONS: Record<WeaponId, WeaponConfig> = {
     name: 'Escopeta',
     tagline: 'Abanico de 8 perdigones, letal de cerca',
     color: '#f97316',
-    damage: 12, // por perdigón (x8 = 96 por ráfaga completa)
+    damage: 17, // por perdigón (x8 = 136 por ráfaga completa — mata en 1 pegado)
     fireRate: 1.5,
     range: 280,
     reloadTime: 1.1,
@@ -49,7 +50,7 @@ export const WEAPONS: Record<WeaponId, WeaponConfig> = {
     name: 'Rifle de asalto',
     tagline: 'Automático y fiable a media distancia',
     color: '#22d3ee',
-    damage: 13,
+    damage: 18,
     fireRate: 8,
     range: 640,
     reloadTime: 2.2,
@@ -62,7 +63,7 @@ export const WEAPONS: Record<WeaponId, WeaponConfig> = {
     name: 'Sniper',
     tagline: 'Un tiro, daño inmenso; pide preparación',
     color: '#a855f7',
-    damage: 75,
+    damage: 105,
     fireRate: 0.9,
     range: 1100,
     reloadTime: 1.8,
@@ -76,7 +77,7 @@ export const WEAPONS: Record<WeaponId, WeaponConfig> = {
     name: 'SMG',
     tagline: 'Ráfaga rapidísima, puntería escasa',
     color: '#eab308',
-    damage: 7,
+    damage: 10,
     fireRate: 13,
     range: 420,
     reloadTime: 1.6,
@@ -90,7 +91,7 @@ export const WEAPONS: Record<WeaponId, WeaponConfig> = {
     name: 'Lanzagranadas',
     tagline: 'Explota al impactar, hasta tras la cobertura',
     color: '#ef4444',
-    damage: 110,
+    damage: 154,
     fireRate: 0.8,
     range: 700,
     reloadTime: 1.4,

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { TuringBackground } from '../ui/TuringBackground';
 import { THEME, monoStyle, sansStyle, monoFaStyle } from '../ui/theme';
-import { fa } from '../ui/icons';
+import { ICONS, iconStyle, fa } from '../ui/icons';
 import { GAME_CONSTANTS } from '../types';
 import { loadJony } from '../data/catalog';
 import type { GameMode } from '../types';
@@ -85,6 +85,14 @@ export class LobbyScene extends Phaser.Scene {
       }))
       .setOrigin(0.5);
 
+    // Icono de reloj junto al countdown (FontAwesome)
+    this.add
+      .text(width / 2 - 150, 150, ICONS.stopwatch, iconStyle({
+        fontSize: '44px',
+        color: THEME.accent,
+      }))
+      .setOrigin(0.5);
+
     this.add
       .text(width / 2, 195, 'LA PARTIDA EMPIEZA EN', monoStyle({
         fontSize: '11px',
@@ -105,13 +113,21 @@ export class LobbyScene extends Phaser.Scene {
       .rectangle(panelX, panelY, panelW, panelH, 0x000000, 0)
       .setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(THEME.border).color);
 
+    // Icono de jugadores (FontAwesome) + título del panel
     this.add
-      .text(panelX, panelY - panelH / 2 + 22, `JUGADORES  (1/${GAME_CONSTANTS.MAX_PLAYERS})`, monoStyle({
+      .text(panelX - 130, panelY - panelH / 2 + 22, ICONS.users, iconStyle({
+        fontSize: '14px',
+        color: THEME.accent,
+      }))
+      .setOrigin(0.5);
+
+    this.add
+      .text(panelX - 108, panelY - panelH / 2 + 22, `JUGADORES  (1/${GAME_CONSTANTS.MAX_PLAYERS})`, monoStyle({
         fontSize: '12px',
         color: THEME.secondary,
         letterSpacing: 3,
       }))
-      .setOrigin(0.5);
+      .setOrigin(0, 0.5);
 
     // Slot 0: Jony local (localStorage losjonys-jony)
     const localName = jony?.name?.trim() || 'Jony';
@@ -197,9 +213,17 @@ export class LobbyScene extends Phaser.Scene {
         .circle(x - rowW / 2 + 30, y, 12, Phaser.Display.Color.HexStringToColor(color).color)
         .setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(THEME.text).color);
 
+      // Icono de usuario (FontAwesome)
+      this.add
+        .text(x - rowW / 2 + 52, y, ICONS.user, iconStyle({
+          fontSize: '13px',
+          color: THEME.secondary,
+        }))
+        .setOrigin(0.5);
+
       // Nombre
       this.add
-        .text(x - rowW / 2 + 56, y, name, monoStyle({
+        .text(x - rowW / 2 + 70, y, name, monoStyle({
           fontSize: '16px',
           color: THEME.text,
         }))

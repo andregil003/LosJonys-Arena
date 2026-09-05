@@ -1,0 +1,21 @@
+/* Nunito — Google Fonts (SIL Open Font License 1.1), self-hosted.
+   Redondeada y amigable tipo Brawl Stars, con pesos fuertes que aguantan
+   sobre fondos oscuros. Muy legible a tamaños pequeños.
+   Uso: UI / nombres de armas / puntuación / stats.
+   Nunito es variable: el mismo woff2 cubre 700 y 800. Solo variante latin. */
+
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../webfonts/nunito-700-800.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('../webfonts/nunito-700-800.woff2') format('woff2');
+}

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { TuringBackground } from '../ui/TuringBackground';
 import { THEME, monoStyle, sansStyle, monoFaStyle } from '../ui/theme';
-import { fa } from '../ui/icons';
+import { ICONS, iconStyle, fa } from '../ui/icons';
 import { GAME_CONSTANTS } from '../types';
 import { loadJony } from '../data/catalog';
 import type { GameMode } from '../types';
@@ -177,7 +177,7 @@ export class AgentSelectScene extends Phaser.Scene {
     } else {
       // Slot vacío
       this.add
-        .text(x, y - 10, '?', monoStyle({
+        .text(x, y - 10, ICONS.question, iconStyle({
           fontSize: '40px',
           color: '#444444',
         }))

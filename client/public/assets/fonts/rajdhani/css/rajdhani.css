@@ -1,0 +1,28 @@
+/* Rajdhani — Google Fonts (SIL Open Font License 1.1), self-hosted.
+   Estética "HUD militar-futurista" tipo Valorant, formas abiertas y juguetonas.
+   Uso: Logo / títulos de pantalla / números (daño, contadores, timer).
+   Solo variante latin (el juego es en español). */
+
+@font-face {
+  font-family: 'Rajdhani';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../webfonts/rajdhani-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Rajdhani';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../webfonts/rajdhani-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Rajdhani';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../webfonts/rajdhani-700.woff2') format('woff2');
+}

@@ -116,6 +116,19 @@ export class NPC implements Damageable {
     return real;
   }
 
+  /** Revive en una posición nueva (FFA: los bots respawnean tras morir). */
+  respawn(x: number, y: number): void {
+    this.hp = this.maxHp;
+    this.alive = true;
+    this.powerCharge = 0;
+    this.gameObject.setPosition(x, y);
+    this.nameText.setPosition(x, y - 28);
+    this.body.enable = true;
+    this.body.reset(x, y);
+    this.targetX = x;
+    this.targetY = y;
+  }
+
   destroy(): void {
     this.gameObject.destroy();
     this.nameText.destroy();

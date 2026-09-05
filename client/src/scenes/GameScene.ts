@@ -8,6 +8,7 @@ import { Player } from '../entities/Player';
 import { NPC } from '../entities/NPC';
 import type { Damageable } from '../systems/combat';
 import { WEAPONS } from '../systems/weapon-catalog';
+import { generateMap, type WallRect } from '../systems/map-gen';
 
 /**
  * GameScene — Arena de juego.
@@ -52,6 +53,16 @@ export class GameScene extends Phaser.Scene {
   private solo = false;
   private netStatus?: Phaser.GameObjects.Text;
 
+  // Mapa procedural (paredes)
+  private walls: Phaser.GameObjects.Rectangle[] = [];
+
+  // Countdown inicial (3-2-1-PELEA): nadie dispara ni recibe daño
+  private countdownActive = true;
+  private countdownText?: Phaser.GameObjects.Text;
+
+  // Respawn de NPCs (FFA: los bots reviven tras morir)
+  private npcRespawns = new Map<NPC, number>();
+
   // HUD
   private hpFill?: Phaser.GameObjects.Rectangle;
   private hpText?: Phaser.GameObjects.Text;
@@ -77,6 +88,9 @@ export class GameScene extends Phaser.Scene {
     // Fondo de la arena
     this.add.rectangle(width / 2, height / 2, width, height, 0x2a2a3f);
 
+    // Mapa procedural: paredes aleatorias (no bloquean la zona de spawn)
+    this.createWalls();
+
     // Jugador local (Player de entities/ — base de puck pilas, Shrek extiende)
     const fallback: JonyConfig = {
       name: 'Jony',
@@ -95,8 +109,17 @@ export class GameScene extends Phaser.Scene {
       this.createDummies();
     }
 
+    // Colliders con las paredes (jugador + NPCs)
+    this.physics.add.collider(this.player.gameObject, this.walls);
+    for (const d of this.dummies) {
+      this.physics.add.collider(d.gameObject, this.walls);
+    }
+
     // HUD
     this.createHud();
+
+    // Countdown inicial: 3-2-1-PELEA (nadie dispara ni recibe daño)
+    this.startCountdown();
 
     // Instrucciones
     this.add
@@ -131,7 +154,8 @@ export class GameScene extends Phaser.Scene {
 
   update(time: number): void {
     if (this.player.alive) {
-      this.player.update(time, this.dummies);
+      // Durante el countdown el jugador se mueve pero no hay targets (no dispara)
+      this.player.update(time, this.countdownActive ? [] : this.dummies);
 
       // Enviar posición al servidor (si está conectado)
       if (network.isConnected) {
@@ -139,10 +163,26 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // Actualizar NPCs (modo solitario): atacan al jugador
+    // Actualizar NPCs (modo solitario): todos contra todos — cada bot ataca
+    // al jugador Y a los demás bots. Quietos durante el countdown.
+    if (!this.countdownActive) {
+      for (const d of this.dummies) {
+        if (d instanceof NPC) {
+          const others = this.dummies.filter((o) => o !== d);
+          d.update(time, [this.player, ...others]);
+        }
+      }
+    }
+
+    // Respawn de NPCs muertos (FFA: reviven a los 4s en posición alejada)
     for (const d of this.dummies) {
-      if (d instanceof NPC) {
-        d.update(time, [this.player]);
+      if (!(d instanceof NPC) || d.alive) continue;
+      if (!this.npcRespawns.has(d)) {
+        this.npcRespawns.set(d, time + 4000);
+      } else if (time >= this.npcRespawns.get(d)!) {
+        const [x, y] = this.randomSpawn(200, 200);
+        d.respawn(x, y);
+        this.npcRespawns.delete(d);
       }
     }
 
@@ -158,6 +198,12 @@ export class GameScene extends Phaser.Scene {
       if (d instanceof NPC) d.destroy();
     }
     this.dummies = [];
+    this.npcRespawns.clear();
+    this.walls.forEach((w) => w.destroy());
+    this.walls = [];
+    this.countdownText?.destroy();
+    this.countdownText = undefined;
+    this.countdownActive = true;
   }
 
   // ============================================================
@@ -179,15 +225,101 @@ export class GameScene extends Phaser.Scene {
   // ============================================================
 
   private createNpcs(): void {
+    const names = ['BOT 1', 'BOT 2', 'BOT 3', 'BOT 4', 'BOT 5'];
+    const colors = ['#ef4444', '#3b82f6', '#a855f7', '#f97316', '#22c55e'];
+
+    // Cada bot spawnea alejado del jugador y de los demás bots
+    const taken: Array<[number, number]> = [];
+    for (let i = 0; i < names.length; i++) {
+      const [x, y] = this.randomSpawn(240, 220, taken);
+      taken.push([x, y]);
+      this.dummies.push(new NPC(this, x, y, names[i], colors[i]));
+    }
+  }
+
+  /** Posición aleatoria lejos del jugador y de otras posiciones tomadas. */
+  private randomSpawn(minFromPlayer: number, minBetween: number, taken: Array<[number, number]> = []): [number, number] {
     const { width, height } = this.scale;
-    const spots: Array<[number, number, string, string]> = [
-      [width * 0.2, height * 0.25, 'BOT 1', '#ef4444'],
-      [width * 0.8, height * 0.3, 'BOT 2', '#3b82f6'],
-      [width * 0.3, height * 0.75, 'BOT 3', '#a855f7'],
-      [width * 0.75, height * 0.7, 'BOT 4', '#f97316'],
-      [width * 0.5, height * 0.15, 'BOT 5', '#22c55e'],
-    ];
-    this.dummies = spots.map(([x, y, name, color]) => new NPC(this, x, y, name, color));
+    for (let i = 0; i < 80; i++) {
+      const x = Phaser.Math.Between(80, width - 80);
+      const y = Phaser.Math.Between(80, height - 80);
+
+      // Lejos del jugador
+      if (this.player && Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y) < minFromPlayer) continue;
+
+      // Lejos de las otras posiciones tomadas
+      let ok = true;
+      for (const [tx, ty] of taken) {
+        if (Phaser.Math.Distance.Between(x, y, tx, ty) < minBetween) {
+          ok = false;
+          break;
+        }
+      }
+      if (!ok) continue;
+
+      return [x, y];
+    }
+    // Fallback: esquina alejada del centro
+    return [Phaser.Math.Between(80, width / 2 - 60), Phaser.Math.Between(80, height / 2 - 60)];
+  }
+
+  // ============================================================
+  // Mapa procedural (paredes)
+  // ============================================================
+
+  private createWalls(): void {
+    const { width, height } = this.scale;
+    const rects: WallRect[] = generateMap(width, height, {
+      count: 10,
+      safeRadius: 240, // respeta la zona de spawn central
+    });
+
+    this.walls = rects.map((r) => {
+      const rect = this.add
+        .rectangle(r.x + r.w / 2, r.y + r.h / 2, r.w, r.h, 0x1a1a2e)
+        .setStrokeStyle(2, Phaser.Display.Color.HexStringToColor('#3a3a5f').color);
+      // Cuerpo estático para colisiones
+      this.physics.add.existing(rect as unknown as Phaser.GameObjects.GameObject, true);
+      return rect;
+    });
+  }
+
+  // ============================================================
+  // Countdown inicial (3-2-1-PELEA)
+  // ============================================================
+
+  private startCountdown(): void {
+    const { width, height } = this.scale;
+    const steps = ['3', '2', '1', '¡PELEA!'];
+
+    this.countdownText = this.add
+      .text(width / 2, height / 2, steps[0], monoStyle({
+        fontSize: '72px',
+        color: THEME.accent,
+        fontStyle: 'bold',
+      }))
+      .setOrigin(0.5)
+      .setDepth(30);
+
+    // Entrada del primer número
+    this.countdownText.setScale(0.4);
+    this.tweens.add({ targets: this.countdownText, scale: 1, duration: 250 });
+
+    let i = 0;
+    const tick = (): void => {
+      i++;
+      if (i >= steps.length) {
+        this.countdownText?.destroy();
+        this.countdownText = undefined;
+        this.countdownActive = false;
+        return;
+      }
+      this.countdownText?.setText(steps[i]);
+      this.countdownText?.setScale(0.4);
+      this.tweens.add({ targets: this.countdownText, scale: 1, duration: 200 });
+      this.time.delayedCall(800, tick);
+    };
+    this.time.delayedCall(800, tick);
   }
 
   // ============================================================

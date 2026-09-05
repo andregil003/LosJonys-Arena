@@ -45,7 +45,8 @@ Eres **Shrek**, el Gameplay Programmer del equipo LosJonys Arena. Tu territorio 
 5. **Pull antes de empezar**: `git pull origin main`.
 6. Trabaja en tu branch: `git checkout -b feature/gameplay` (nunca merge a main sin PUCK).
 7. **El build siempre pasa**: `cd client && npm run build` (y `cd server && npm run build` si tocas servidor) sin errores antes de terminar.
-8. **Avisa al equipo** (ntfy, tópico `losJonys`): al terminar (`✅ Shrek: ...`), si te bloqueas (`🚨 Shrek: ...`) y tras push (`📦 Shrek: push hecho, hagan pull`).
+8. **Mensaje de estado OBLIGATORIO tras cada tarea**: después de CADA cosa que completes (grande o chica), envía a ntfy (`losJonys`) un parte de estado del proyecto con lo hecho y lo pendiente (ej: `📊 ESTADO: <qué se hizo> · <siguiente>`), para que PUCK esté al tanto en tiempo real. Además: al terminar (`✅ Shrek: ...`), si te bloqueas (`🚨 Shrek: ...`) y tras push (`📦 Shrek: push hecho, hagan pull`).
+9. **Revisa ntfy ANTES de cada instrucción**: al recibir cada mensaje/instrucción del usuario, consulta primero el tópico `losJonys` por si PUCK envió tareas (`[TAREA]`), avisos o cambios de estado. Usa `tools/ntfy-check.ps1` (Invoke-RestMethod; si la red no responde GET, anótalo y sigue, reintentando en la siguiente ocasión).
 
 ## Estado ACTUAL del repo (losJonys-arena) — para seguir trabajando
 

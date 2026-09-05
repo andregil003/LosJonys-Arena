@@ -1,16 +1,19 @@
 /**
- * ArenaRoom — Sala base del servidor (Colyseus).
+ * ArenaRoom — Sala base del servidor (Colyseus 0.18).
  *
  * PUCK: infraestructura (conexión, join/leave, estado base).
  * Shrek: extiende esta sala para COOP (CoopRoom) y FFA (FFARoom)
  * con la lógica de gameplay: movimiento autoritativo, daño, armas,
  * poderes, enemigos (COOP), zona que se encoge (FFA).
+ *
+ * NOTA API 0.18: onMessage se registra con this.onMessage(tipo, callback)
+ * dentro de onCreate. El callback recibe (client, message, ctx).
  */
 
-import { Room, Client } from 'colyseus';
+import { Room, Client } from '@colyseus/core';
 import { ArenaState, Player } from '../state';
 
-export class ArenaRoom extends Room<ArenaState> {
+export class ArenaRoom extends Room<{ state: ArenaState }> {
   maxClients = 6;
 
   onCreate(_options: any): void {
@@ -19,7 +22,34 @@ export class ArenaRoom extends Room<ArenaState> {
     this.state.maxPlayers = this.maxClients;
 
     // Tick del servidor (30 Hz) — Shrek: aquí va el game loop autoritativo
-    this.setSimulationInterval(() => this.updateGame(), 1000 / 30);
+    this.setTimestep((deltaTime) => this.updateGame(deltaTime));
+
+    // --- Mensajes del cliente ---
+    this.onMessage('move', (client, message: { x: number; y: number }) => {
+      const player = this.state.players.get(client.sessionId);
+      if (!player) return;
+      // Shrek: validar velocidad máxima aquí (anti-cheat)
+      player.x = message.x;
+      player.y = message.y;
+    });
+
+    this.onMessage('shoot', (client) => {
+      // Shrek: lógica de disparo autoritativa
+      const player = this.state.players.get(client.sessionId);
+      if (!player) return;
+    });
+
+    this.onMessage('knife', (client) => {
+      // Shrek: lógica de cuchillo instakill
+      const player = this.state.players.get(client.sessionId);
+      if (!player) return;
+    });
+
+    this.onMessage('power', (client) => {
+      // Shrek: lógica de poderes
+      const player = this.state.players.get(client.sessionId);
+      if (!player) return;
+    });
   }
 
   onJoin(client: Client, options: any): void {
@@ -42,31 +72,7 @@ export class ArenaRoom extends Room<ArenaState> {
     console.log(`[LEAVE] ${client.sessionId} — ${this.state.players.size}/${this.maxClients}`);
   }
 
-  onMessage(client: Client, type: string | number, message: any): void {
-    const player = this.state.players.get(client.sessionId);
-    if (!player) return;
-
-    switch (type) {
-      case 'move':
-        // Shrek: movimiento autoritativo con validación de velocidad
-        player.x = message.x;
-        player.y = message.y;
-        break;
-      case 'shoot':
-        // Shrek: lógica de disparo autoritativa
-        break;
-      case 'knife':
-        // Shrek: lógica de cuchillo instakill
-        break;
-      case 'power':
-        // Shrek: lógica de poderes
-        break;
-      default:
-        break;
-    }
-  }
-
-  private updateGame(): void {
+  private updateGame(_deltaTime: number): void {
     // Shrek: game loop autoritativo (daño, colisiones, rondas, zona)
   }
 }

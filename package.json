@@ -1,0 +1,19 @@
+{
+  "name": "losjonys-arena",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Arena 2D top-down shooter — sistema base de jugadores, armas y poderes (LosJonys)",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "phaser": "^4.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^5.4.21"
+  }
+}

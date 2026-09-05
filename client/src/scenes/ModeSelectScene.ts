@@ -263,8 +263,8 @@ export class ModeSelectScene extends Phaser.Scene {
     // Guardar modo elegido
     localStorage.setItem('losjonys-mode', this.selected ?? 'ffa');
 
-    // TODO: ir a LobbyScene cuando exista (puck pilas la está haciendo)
-    this.scene.start('GameScene', { mode: this.selected });
+    // Ir al lobby (2:00 de espera) — desde ahí: COOP → AgentSelectScene / FFA → GameScene
+    this.scene.start('LobbyScene', { mode: this.selected });
   }
 
   shutdown(): void {

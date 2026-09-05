@@ -3,6 +3,8 @@ import { GAME_CONSTANTS } from './types';
 import { MenuScene } from './scenes/MenuScene';
 import { CreateJonyScene } from './scenes/CreateJonyScene';
 import { ModeSelectScene } from './scenes/ModeSelectScene';
+import { LobbyScene } from './scenes/LobbyScene';
+import { AgentSelectScene } from './scenes/AgentSelectScene';
 import { GameScene } from './scenes/GameScene';
 
 export const gameConfig: Phaser.Types.Core.GameConfig = {
@@ -25,5 +27,5 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [MenuScene, CreateJonyScene, ModeSelectScene, GameScene],
+  scene: [MenuScene, CreateJonyScene, ModeSelectScene, LobbyScene, AgentSelectScene, GameScene],
 };

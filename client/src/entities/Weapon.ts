@@ -17,6 +17,7 @@ import Phaser from 'phaser';
 import type { WeaponConfig } from '../systems/weapon-catalog';
 import type { Damageable } from '../systems/combat';
 import { applyDamage, addPowerCharge } from '../systems/combat';
+import { playWeaponShot, playWeaponExplosion, playWeaponReload } from '../systems/weapon-sfx';
 
 export class Weapon {
   readonly config: WeaponConfig;
@@ -45,6 +46,7 @@ export class Weapon {
   reload(): void {
     if (this.reloading) return;
     this.reloading = true;
+    playWeaponReload(this.scene);
     this.scene.time.delayedCall(this.config.reloadTime * 1000, () => {
       this.reloading = false;
     });
@@ -58,23 +60,22 @@ export class Weapon {
     if (!this.canFire(now)) return;
     this.lastFireAt = now;
 
+    const doShot = (): void => {
+      if (this.config.hitscan) {
+        this.fireHitscan(x, y, angle, targets);
+      } else {
+        this.fireProjectile(x, y, angle, targets);
+      }
+      playWeaponShot(this.scene, this.config.id);
+    };
+
     if (this.config.windup) {
-      // Placeholder windup (sniper): pequeño delay antes del disparo
-      this.scene.time.delayedCall(this.config.windup * 1000, () => {
-        if (this.config.hitscan) {
-          this.fireHitscan(x, y, angle, targets);
-        } else {
-          this.fireProjectile(x, y, angle, targets);
-        }
-      });
+      // El sonido del disparo sale al hacer el tiro (tras la preparación), no al cargar
+      this.scene.time.delayedCall(this.config.windup * 1000, doShot);
       return;
     }
 
-    if (this.config.hitscan) {
-      this.fireHitscan(x, y, angle, targets);
-    } else {
-      this.fireProjectile(x, y, angle, targets);
-    }
+    doShot();
   }
 
   // ============================================================
@@ -173,6 +174,7 @@ export class Weapon {
 
   /** Explosión en área (lanzagranadas w5). */
   private explode(x: number, y: number, radius: number, damage: number, targets: Damageable[]): void {
+    playWeaponExplosion(this.scene);
     this.scene.add.circle(x, y, radius, Phaser.Display.Color.HexStringToColor('#f87171').color, 0.35).setDepth(4);
     for (const t of targets) {
       if (!t.alive) continue;

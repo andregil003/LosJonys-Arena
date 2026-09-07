@@ -8,6 +8,12 @@ Arena brawler 2D top-down donde creas tu personaje ("Jony") con 2 armas + 1 pode
 
 ---
 
+## 🎬 Video
+
+[![LosJonys Arena — Gameplay](https://img.youtube.com/vi/DwtnX_3Bi-g/0.jpg)](https://www.youtube.com/watch?v=DwtnX_3Bi-g)
+
+---
+
 ## 📸 Screenshots
 
 | Menú principal | Crea tu Jony |

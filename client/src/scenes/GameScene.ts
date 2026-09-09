@@ -13,6 +13,7 @@ import { generateMap, type WallRect } from '../systems/map-gen';
 import { pickRandomArena, type Arena } from '../systems/arenas';
 import { BackgroundSystem } from '../systems/backgrounds';
 import { MusicSystem } from '../systems/music-system';
+import { MobileControls } from '../ui/MobileControls';
 import type { ServerGameState } from '../systems/network';
 
 /**
@@ -81,6 +82,7 @@ export class GameScene extends Phaser.Scene {
   private deathOverlay?: Phaser.GameObjects.Text;
   private ammoText?: Phaser.GameObjects.Text;
   private killText?: Phaser.GameObjects.Text;
+  private mobileControls?: MobileControls;
 
   constructor() {
     super('GameScene');
@@ -117,6 +119,10 @@ export class GameScene extends Phaser.Scene {
     };
     this.player = new Player(this, jony ?? fallback, GAME_CONSTANTS.ARENA_WIDTH / 2, GAME_CONSTANTS.ARENA_HEIGHT / 2);
     this.player.setWalls(this.walls);
+
+    // Controles táctiles (móvil): joystick virtual + botones de arma/poder
+    this.mobileControls = new MobileControls(this);
+    this.player.attachMobileControls(this.mobileControls);
 
     // Dummies de prueba (placeholder hasta que Shrek ponga enemigos reales)
     if (this.solo) {
@@ -217,6 +223,7 @@ export class GameScene extends Phaser.Scene {
     EventBus.off(GameEvents.PLAYER_DIED, this.onPlayerDied, this);
     EventBus.off(GameEvents.SCENE_CHANGED, this.onServerState, this);
     MusicSystem.stop();
+    this.mobileControls?.destroy();
     this.player?.destroy();
     for (const d of this.dummies) {
       if (d instanceof NPC) d.destroy();

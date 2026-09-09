@@ -19,6 +19,7 @@ import { WEAPONS } from '../systems/weapon-catalog';
 import { applyDamage, addPowerCharge, consumePower, heal } from '../systems/combat';
 import type { Damageable } from '../systems/combat';
 import { network } from '../systems/network';
+import { MobileControls } from '../ui/MobileControls';
 import { Weapon } from './Weapon';
 
 export class Player implements Damageable {
@@ -54,6 +55,8 @@ export class Player implements Damageable {
   private walls: Phaser.GameObjects.Rectangle[] = [];
   /** Combate habilitado (false durante el countdown — no dispara ni gasta munición). */
   private combatEnabled = true;
+  /** Controles táctiles (móvil): joystick + botones. Los adjunta GameScene. */
+  private mobile?: MobileControls;
 
   constructor(scene: Phaser.Scene, jony: JonyConfig, x: number, y: number) {
     this.scene = scene;
@@ -119,6 +122,15 @@ export class Player implements Damageable {
     this.combatEnabled = enabled;
   }
 
+  /** Adjunta los controles táctiles (móvil). */
+  attachMobileControls(controls: MobileControls): void {
+    this.mobile = controls;
+    controls.setCallbacks({
+      onWeaponSlot: (slot) => this.setSlot(slot),
+      onPower: () => this.usePower(),
+    });
+  }
+
   /** Arma activa (null si el cuchillo está en mano). */
   get activeWeapon(): Weapon | null {
     return this.activeSlot === 3 ? null : this.weapons[this.activeSlot - 1];
@@ -148,8 +160,9 @@ update(time: number, targets: Damageable[]): void {
     const inaccuracy = GAME_CONSTANTS.PLAYER_MISS_RATE;
     const angle = Phaser.Math.Angle.Between(this.x, this.y, wx, wy) + Phaser.Math.FloatBetween(-inaccuracy, inaccuracy);
 
-    // Disparar / cuchillo con clic (bloqueado durante el countdown)
-    if (pointer.isDown && this.combatEnabled) {
+    // Disparar / cuchillo con clic (bloqueado durante el countdown).
+    // En móvil: no dispara si el toque está sobre los controles táctiles.
+    if (pointer.isDown && !this.mobile?.isConsumingPointer && this.combatEnabled) {
       if (this.activeSlot === 3) {
         this.tryKnife(time, targets);
       } else {
@@ -172,10 +185,17 @@ this.activeWeapon?.fire(this.x, this.y, angle, targets, time, this.walls, this);
   private handleMovement(): void {
     let vx = 0;
     let vy = 0;
-    if (this.cursors.left.isDown || this.wasd.A.isDown) vx = -1;
-    if (this.cursors.right.isDown || this.wasd.D.isDown) vx = 1;
-    if (this.cursors.up.isDown || this.wasd.W.isDown) vy = -1;
-    if (this.cursors.down.isDown || this.wasd.S.isDown) vy = 1;
+
+    // Móvil: el joystick virtual manda (si está activo)
+    if (this.mobile?.isActive) {
+      vx = this.mobile.vectorX;
+      vy = this.mobile.vectorY;
+    } else {
+      if (this.cursors.left.isDown || this.wasd.A.isDown) vx = -1;
+      if (this.cursors.right.isDown || this.wasd.D.isDown) vx = 1;
+      if (this.cursors.up.isDown || this.wasd.W.isDown) vy = -1;
+      if (this.cursors.down.isDown || this.wasd.S.isDown) vy = 1;
+    }
 
     if (vx !== 0 && vy !== 0) {
       const inv = Math.SQRT1_2;
@@ -206,24 +226,28 @@ this.activeWeapon?.fire(this.x, this.y, angle, targets, time, this.walls, this);
 
   private handlePower(): void {
     if (Phaser.Input.Keyboard.JustDown(this.keyQ) || Phaser.Input.Keyboard.JustDown(this.keyShift)) {
-      if (consumePower(this)) {
-        // Enviar la acción de poder al servidor (multiplayer autoritativo)
-        const pointer = this.scene.input.activePointer;
-        const angle = Phaser.Math.Angle.Between(this.x, this.y, pointer.worldX, pointer.worldY);
-        network.sendPower(angle);
-
-        // TODO(Shrek): efecto real del poder (dash, escudo, kamehameha...)
-        // Placeholder: flash cian
-        const flash = this.scene.add.circle(this.x, this.y, 40, 0x22d3ee, 0.4).setDepth(6);
-        this.scene.tweens.add({
-          targets: flash,
-          alpha: 0,
-          scale: 2.5,
-          duration: 300,
-          onComplete: () => flash.destroy(),
-        });
-      }
+      this.usePower();
     }
+  }
+
+  /** Usa el poder si la Super está cargada (teclado Q/Shift o botón táctil). */
+  usePower(): void {
+    if (!consumePower(this)) return;
+    // Enviar la acción de poder al servidor (multiplayer autoritativo)
+    const pointer = this.scene.input.activePointer;
+    const angle = Phaser.Math.Angle.Between(this.x, this.y, pointer.worldX, pointer.worldY);
+    network.sendPower(angle);
+
+    // TODO(Shrek): efecto real del poder (dash, escudo, kamehameha...)
+    // Placeholder: flash cian
+    const flash = this.scene.add.circle(this.x, this.y, 40, 0x22d3ee, 0.4).setDepth(6);
+    this.scene.tweens.add({
+      targets: flash,
+      alpha: 0,
+      scale: 2.5,
+      duration: 300,
+      onComplete: () => flash.destroy(),
+    });
   }
 
   // ============================================================

@@ -6,6 +6,19 @@ Arena brawler 2D top-down donde creas tu personaje ("Jony") con 2 armas + 1 pode
 
 > 🏆 Construido en la **IEEE CS Game Jam de la UNIS** (septiembre 2026)
 
+🎮 **Juega ahora (GitHub Pages):** https://andregil003.github.io/LosJonys-Arena/
+
+> ⚠️ **Nota:** la versión de Pages funciona en **modo solitario (vs bots)** — el servidor multiplayer (Colyseus) se despliega aparte. El juego arranca igual si el servidor no está disponible.
+
+---
+
+## 🕹️ Controles
+
+| Dispositivo | Controles |
+|---|---|
+| 💻 PC | WASD / flechas: mover · Clic: disparar · 1/2/3: arma · R: recargar · Q/Shift: poder · ESC: menú |
+| 📱 Móvil / Tablet | **Joystick virtual** (mitad izquierda de la pantalla): mover · Toca la pantalla: disparar · Botones **1/2/3**: arma · Botón **⚡**: poder |
+
 ---
 
 ## 🎬 Video
@@ -69,6 +82,13 @@ npm run dev        # http://localhost:2567
 
 - **PUCK** — PM, Arquitecto, QA, UI, servidor
 - **Shrek** — Gameplay Programmer (armas, poderes, enemigos, IA)
+
+## 🎵 Música y créditos
+
+- **Música de fondo** (`music-lobby.mp3`, `music-w1.mp3` … `music-w5.mp3`): sacada de **YouTube** para la game jam (uso no comercial / demo). Si el juego se publica comercialmente, hay que reemplazarla por música con licencia libre.
+- **SFX**: [Kenney](https://kenney.nl/) (CC0 — dominio público).
+- **Tipografías**: Rajdhani y Nunito (Google Fonts, OFL), self-hosted.
+- **Iconos**: FontAwesome (self-hosted).
 
 ## 📦 Roadmap
 
